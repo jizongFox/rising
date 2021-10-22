@@ -1,13 +1,17 @@
-from typing import Any, Callable, Sequence, Tuple, Union
+from typing import Any, Callable, Sequence, Tuple, TypeVar, Union
 
 import torch
 
 from rising.random import AbstractParameter, DiscreteParameter
+from rising.transforms.format import ntuple
 
 __all__ = ["AbstractTransform", "BaseTransform", "PerSampleTransform", "PerChannelTransform", "BaseTransformSeeded"]
 
-augment_callable = Callable[[torch.Tensor], Any]
+augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
+
+T = TypeVar("T")
+item_or_sequence = Union[T, Sequence[T]]
 
 
 class AbstractTransform(torch.nn.Module):
@@ -153,6 +157,7 @@ class BaseTransform(AbstractTransform):
         self.kwargs = kwargs
         for name, val in zip(property_names, sampler_vals):
             self.register_sampler(name, val)
+        self._tuple_generator = ntuple(len(self.keys))
 
     def forward(self, **data) -> dict:
         """
