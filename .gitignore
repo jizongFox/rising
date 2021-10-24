@@ -10,6 +10,9 @@ __pycache__
 
 # data which is automatically downloaded inside notebooks
 notebooks/ExBox3
+notebooks/MedNIST.tar.gz
+notebooks/MedNIST/
+notebooks/demo_classification.py
 
 # C extensions
 *.so

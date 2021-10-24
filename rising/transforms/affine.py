@@ -375,6 +375,14 @@ class BaseAffine(Affine):
                 calculated dynamically to ensure that the whole image fits.
             interpolation_mode: interpolation mode to calculate output values
                 ``'bilinear'`` | ``'nearest'``. Default: ``'bilinear'``
+                documents from PyTorch:
+                mode (str) – interpolation mode to calculate output values 'bilinear'
+                | 'nearest' | 'bicubic'. Default: 'bilinear'
+                Note: mode='bicubic' supports only 4-D input.
+                When mode='bilinear' and the input is 5-D, the interpolation mode used
+                internally will actually be trilinear. However, when the input is 4-D,
+                the interpolation mode will legitimately be bilinear.
+
             padding_mode: padding mode for outside grid values
                 ``'zeros'`` | ``'border'`` | ``'reflection'``.
                 Default: ``'zeros'``

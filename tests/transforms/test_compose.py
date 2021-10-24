@@ -4,6 +4,7 @@ import unittest
 
 import torch
 
+from rising.loading.loader import iter_transform
 from rising.transforms import AbstractTransform
 from rising.transforms.compose import Compose, DropoutCompose, OneOf, _TransformWrapper
 from rising.transforms.spatial import Mirror
@@ -133,6 +134,11 @@ class TestCompose(unittest.TestCase):
                     comp = trafo_cls([])
                 with self.assertRaises(ValueError):
                     comp = trafo_cls()
+
+    def test_iter_transform(self):
+        tras = iter_transform(self.transforms)
+        tras2 = iter_transform(Compose(self.transforms))
+        assert list(tras) == list(tras2)
 
 
 if __name__ == "__main__":
