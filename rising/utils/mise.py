@@ -10,7 +10,7 @@ def ntuple(n):
         if isinstance(x, (Tensor, np.ndarray, str)):
             return tuple(repeat(x, n))
         if isinstance(x, collections.abc.Iterable):
-            item_list = list(x)
+            item_list = tuple(x)
             if len(item_list) == n:
                 return item_list
             if len(item_list) == 1:

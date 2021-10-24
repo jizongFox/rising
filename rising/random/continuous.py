@@ -3,7 +3,7 @@ from typing import Union
 import torch
 from torch.distributions import Distribution as TorchDistribution
 
-from rising.random.abstract import AbstractParameter
+from rising.random.abstract import AbstractParameter, ConstantParameter
 
 __all__ = ["ContinuousParameter", "NormalParameter", "UniformParameter"]
 
@@ -44,7 +44,10 @@ class NormalParameter(ContinuousParameter):
             mu : the distributions mean
             sigma : the distributions standard deviation
         """
-        super().__init__(torch.distributions.Normal(loc=mu, scale=sigma))
+        if sigma == 0:
+            super(NormalParameter, self).__init__(ConstantParameter(constant=mu))  # return constant
+        else:
+            super().__init__(torch.distributions.Normal(loc=mu, scale=sigma))
 
 
 class UniformParameter(ContinuousParameter):
@@ -59,4 +62,7 @@ class UniformParameter(ContinuousParameter):
             low : the lower range (inclusive)
             high : the higher range (exclusive)
         """
-        super().__init__(torch.distributions.Uniform(low=low, high=high))
+        if low == high:
+            super(UniformParameter, self).__init__(ConstantParameter(low))  # return constant
+        else:
+            super().__init__(torch.distributions.Uniform(low=low, high=high))

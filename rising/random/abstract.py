@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Optional, Sequence, Union
 
 import torch
-
+import typing as t
 from rising.utils.shape import reshape
 
 __all__ = ["AbstractParameter"]
@@ -42,11 +42,11 @@ class AbstractParameter(torch.nn.Module):
         raise NotImplementedError
 
     def forward(
-        self,
-        size: Optional[Union[Sequence, torch.Size]] = None,
-        device: Union[torch.device, str] = None,
-        dtype: Union[torch.dtype, str] = None,
-        tensor_like: torch.Tensor = None,
+            self,
+            size: Optional[Union[Sequence, torch.Size]] = None,
+            device: Union[torch.device, str] = None,
+            dtype: Union[torch.dtype, str] = None,
+            tensor_like: torch.Tensor = None,
     ) -> Union[None, list, torch.Tensor]:
         """
         Forward function (will also be called if the module is called).
@@ -87,3 +87,12 @@ class AbstractParameter(torch.nn.Module):
             else:
                 samples = samples.to(device=device, dtype=dtype)
         return samples
+
+
+class ConstantParameter(AbstractParameter):
+    def __init__(self, constant: t.Union[int, float]):
+        super().__init__()
+        self.constant = constant
+
+    def sample(self, n_samples: int) -> Union[torch.Tensor, list]:
+        return torch.as_tensor([self.constant for _ in range(n_samples[0])])
