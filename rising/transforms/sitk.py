@@ -1,10 +1,10 @@
-from typing import Sequence, Tuple, Union, Type
+from typing import Sequence, Tuple, Union
 
 import torch
 
 from rising.random.abstract import AbstractParameter
 from rising.transforms.abstract import item_or_sequence, BaseTransform
-from rising.transforms_ext.functional.sitk import itk_resample, itk_clip, itk2tensor
+from rising.transforms.functional.sitk import itk_resample, itk_clip, itk2tensor
 
 SpacingParamType = Union[
     int, Sequence[int], float, Sequence[float], torch.Tensor, AbstractParameter, Sequence[AbstractParameter]
@@ -51,14 +51,27 @@ class SITKWindows(BaseTransform):
     """
 
     def __init__(self, low: IntNumType, high: IntNumType, *, keys: Sequence[str] = ("data",), **kwargs):
-        super().__init__(itk_clip, keys=keys, grad=False, **kwargs)
-        self.register_sampler("low", low)
-        self.register_sampler("high", high)
+        super().__init__(itk_clip, keys=keys, grad=False, property_names=("low", "high"), low=low, high=high, **kwargs)
+
+    def forward(self, **data) -> dict:
+        kwargs = {}
+        for k in self.property_names:
+            kwargs[k] = getattr(self, k)
+
+        kwargs.update(self.kwargs)
+
+        # to make sure that in the sampling, there is case where `high` is lower than `low`.
+        if kwargs["low"] > kwargs["high"]:
+            kwargs["low"], kwargs["high"] = kwargs["high"], kwargs["low"]
+
+        for _key in self.keys:
+            data[_key] = self.augment_fn(data[_key], *self.args, **kwargs)
+        return data
 
 
 class SITK2Tensor(BaseTransform):
 
-    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_sequence[Type[torch.float]] = torch.float,
+    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_sequence = torch.float,
                  grad: bool = False, **kwargs):
         super().__init__(itk2tensor, keys=keys, grad=grad, **kwargs)
         self.dtype = self._tuple_generator(dtype)

@@ -2,6 +2,8 @@ import unittest
 
 import torch
 
+from rising.loading import default_transform_call
+from rising.transforms import Compose
 from rising.transforms.format import MapToSeq, RenameKeys, SeqToMap
 
 
@@ -17,7 +19,7 @@ class TestFormat(unittest.TestCase):
         self.assertEqual(out[2], 2)
 
     def test_seq_to_map(self):
-        trafo = SeqToMap(("data", "seg", "label"))
+        trafo = Compose(SeqToMap(("data", "seg", "label")), transform_call=default_transform_call)
         out = trafo(0, 1, 2)
         self.assertEqual(out["data"], 0)
         self.assertEqual(out["seg"], 1)

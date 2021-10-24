@@ -1,5 +1,4 @@
-from rising.transforms_ext.functional.sitk import itk_resample, itk_clip
-import torch
+from rising.transforms.functional.sitk import itk_resample, itk_clip
 import SimpleITK as sitk
 import unittest
 import numpy as np

@@ -21,6 +21,7 @@ from rising.transforms.functional.intensity import (
 __all__ = [
     "Clamp",
     "NormRange",
+    "NormPercentile",
     "NormMinMax",
     "NormZeroMeanUnitStd",
     "NormMeanStd",
@@ -40,12 +41,12 @@ class Clamp(BaseTransform):
     """Apply augment_fn to keys"""
 
     def __init__(
-        self,
-        min: Union[float, AbstractParameter],
-        max: Union[float, AbstractParameter],
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs
+            self,
+            min: Union[float, AbstractParameter],
+            max: Union[float, AbstractParameter],
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs
     ):
         """
 
@@ -64,13 +65,13 @@ class Clamp(BaseTransform):
 
 class NormRange(PerSampleTransform):
     def __init__(
-        self,
-        min: Union[float, AbstractParameter],
-        max: Union[float, AbstractParameter],
-        keys: Sequence = ("data",),
-        per_channel: bool = True,
-        grad: bool = False,
-        **kwargs
+            self,
+            min: Union[float, AbstractParameter],
+            max: Union[float, AbstractParameter],
+            keys: Sequence = ("data",),
+            per_channel: bool = True,
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:
@@ -124,12 +125,12 @@ class NormMinMax(PerSampleTransform):
     """Norm to [0, 1]"""
 
     def __init__(
-        self,
-        keys: Sequence = ("data",),
-        per_channel: bool = True,
-        grad: bool = False,
-        eps: Optional[float] = 1e-8,
-        **kwargs
+            self,
+            keys: Sequence = ("data",),
+            per_channel: bool = True,
+            grad: bool = False,
+            eps: Optional[float] = 1e-8,
+            **kwargs
     ):
         """
         Args:
@@ -147,12 +148,12 @@ class NormZeroMeanUnitStd(PerSampleTransform):
     """Normalize mean to zero and std to one"""
 
     def __init__(
-        self,
-        keys: Sequence = ("data",),
-        per_channel: bool = True,
-        grad: bool = False,
-        eps: Optional[float] = 1e-8,
-        **kwargs
+            self,
+            keys: Sequence = ("data",),
+            per_channel: bool = True,
+            grad: bool = False,
+            eps: Optional[float] = 1e-8,
+            **kwargs
     ):
         """
         Args:
@@ -172,13 +173,13 @@ class NormMeanStd(PerSampleTransform):
     """Normalize mean and std with provided values"""
 
     def __init__(
-        self,
-        mean: Union[float, Sequence[float]],
-        std: Union[float, Sequence[float]],
-        keys: Sequence[str] = ("data",),
-        per_channel: bool = True,
-        grad: bool = False,
-        **kwargs
+            self,
+            mean: Union[float, Sequence[float]],
+            std: Union[float, Sequence[float]],
+            keys: Sequence[str] = ("data",),
+            per_channel: bool = True,
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:
@@ -202,7 +203,7 @@ class Noise(PerChannelTransform):
     """
 
     def __init__(
-        self, noise_type: str, per_channel: bool = False, keys: Sequence = ("data",), grad: bool = False, **kwargs
+            self, noise_type: str, per_channel: bool = False, keys: Sequence = ("data",), grad: bool = False, **kwargs
     ):
         """
         Args:
@@ -262,7 +263,7 @@ class GammaCorrection(BaseTransform):
     """Apply Gamma correction"""
 
     def __init__(
-        self, gamma: Union[float, AbstractParameter], keys: Sequence = ("data",), grad: bool = False, **kwargs
+            self, gamma: Union[float, AbstractParameter], keys: Sequence = ("data",), grad: bool = False, **kwargs
     ):
         """
         Args:
@@ -284,13 +285,13 @@ class RandomValuePerChannel(PerChannelTransform):
     """
 
     def __init__(
-        self,
-        augment_fn: callable,
-        random_sampler: AbstractParameter,
-        per_channel: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs
+            self,
+            augment_fn: callable,
+            random_sampler: AbstractParameter,
+            per_channel: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:
@@ -348,12 +349,12 @@ class RandomAddValue(RandomValuePerChannel):
     """
 
     def __init__(
-        self,
-        random_sampler: AbstractParameter,
-        per_channel: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs
+            self,
+            random_sampler: AbstractParameter,
+            per_channel: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:
@@ -376,12 +377,12 @@ class RandomScaleValue(RandomValuePerChannel):
     """
 
     def __init__(
-        self,
-        random_sampler: AbstractParameter,
-        per_channel: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs
+            self,
+            random_sampler: AbstractParameter,
+            per_channel: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:

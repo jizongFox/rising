@@ -48,6 +48,7 @@ from rising.transforms.intensity import (
     RandomValuePerChannel,
     NormPercentile
 )
+from rising.transforms.sitk import SITKWindows, SITKResample, SITK2Tensor
 from rising.transforms.kernel import GaussianSmoothing, KernelTransform
 from rising.transforms.painting import LocalPixelShuffle, RandomInOrOutpainting, RandomInpainting, RandomOutpainting
 from rising.transforms.spatial import Mirror, ProgressiveResize, ResizeNative, Rot90, SizeStepScheduler, Zoom

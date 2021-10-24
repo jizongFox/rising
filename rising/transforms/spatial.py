@@ -12,6 +12,7 @@ __all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "Size
 
 from rising.transforms.abstract import item_or_sequence
 from rising.transforms.functional import mirror, resize_native, rot90
+from rising.utils import check_scalar
 
 scheduler_type = Callable[[int], Union[int, Sequence[int]]]
 
@@ -20,12 +21,12 @@ class Mirror(AbstractTransform):
     """Random mirror transform"""
 
     def __init__(
-        self,
-        dims: Union[int, DiscreteParameter, Sequence[Union[int, DiscreteParameter]]],
-        keys: Sequence[str] = ("data",),
-        prob: float = 0.5,
-        grad: bool = False,
-        **kwargs
+            self,
+            dims: Union[int, DiscreteParameter, Sequence[Union[int, DiscreteParameter]]],
+            keys: Sequence[str] = ("data",),
+            prob: item_or_sequence[float] = 0.5,
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:
@@ -46,6 +47,7 @@ class Mirror(AbstractTransform):
         super().__init__(grad=grad, **kwargs)
         self.keys = keys
         self.prob = prob
+
         if not isinstance(dims, DiscreteParameter):
             if len(dims) > 2:
                 dims = list(combinations(dims, 2))
@@ -63,9 +65,19 @@ class Mirror(AbstractTransform):
         Returns:
             dict: dict with augmented data
         """
-        if torch.rand(1) < self.prob:
-            for key in self.keys:
-                data[key] = mirror(data[key], self.dims)
+        total_dim = data[self.keys[0]].dim() - 2
+        if check_scalar(self.prob):
+            prob = [self.prob] * total_dim
+        else:
+            assert len(self.prob) == total_dim, "dimension wrong"
+            prob = self.prob
+
+        seed = torch.random.get_rng_state()
+        for key in self.keys:
+            torch.random.set_rng_state(seed)
+            for dim, p in zip(self.dims, prob):
+                if torch.rand(1) < p:
+                    data[key] = mirror(data[key], dim)
         return data
 
 
@@ -73,13 +85,13 @@ class Rot90(AbstractTransform):
     """Rotate 90 degree around dims"""
 
     def __init__(
-        self,
-        dims: Union[Sequence[int], DiscreteParameter],
-        keys: Sequence[str] = ("data",),
-        num_rots: Sequence[int] = (0, 1, 2, 3),
-        prob: float = 0.5,
-        grad: bool = False,
-        **kwargs
+            self,
+            dims: Union[Sequence[int], DiscreteParameter],
+            keys: Sequence[str] = ("data",),
+            num_rots: Sequence[int] = (0, 1, 2, 3),
+            prob: float = 0.5,
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:
@@ -196,14 +208,14 @@ class Zoom(BaseTransform):
     """
 
     def __init__(
-        self,
-        scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
-        mode: str = "nearest",
-        align_corners: bool = None,
-        preserve_range: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs
+            self,
+            scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
+            mode: str = "nearest",
+            align_corners: bool = None,
+            preserve_range: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs
     ):
         """
         Args:

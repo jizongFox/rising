@@ -33,3 +33,4 @@ from rising.transforms.functional.painting import local_pixel_shuffle, random_in
 from rising.transforms.functional.spatial import mirror, resize_native, rot90
 from rising.transforms.functional.tensor import tensor_op, to_device_dtype
 from rising.transforms.functional.utility import box_to_seg, filter_keys, instance_to_semantic, pop_keys, seg_to_box
+from rising.transforms.functional.sitk import itk_resample, itk_clip, itk2tensor

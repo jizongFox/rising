@@ -46,7 +46,7 @@ def itk_clip(image: sitk.Image, low: int, high: int) -> sitk.Image:
         sitk.Image
     """
     assert low < high, (low, high)
-    return sitk.Clamp(image, sitk.sitkInt16, low, high)
+    return sitk.Clamp(image, sitk.sitkInt16, int(low), int(high))
 
 
 def itk2tensor(image: sitk.Image, *, dtype=torch.float):
