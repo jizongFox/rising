@@ -5,7 +5,8 @@ import torch
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import ntuple
 
-__all__ = ["AbstractTransform", "BaseTransform", "PerSampleTransform", "PerChannelTransform", "BaseTransformSeeded"]
+__all__ = ["AbstractTransform", "item_or_sequence", "BaseTransform", "PerSampleTransform", "PerChannelTransform",
+           "BaseTransformSeeded"]
 
 augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
