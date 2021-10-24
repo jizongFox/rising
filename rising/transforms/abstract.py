@@ -3,7 +3,7 @@ from typing import Any, Callable, Sequence, Tuple, Union, TypeVar
 import torch
 
 from rising.random import AbstractParameter, DiscreteParameter
-from rising.transforms.format import ntuple
+from rising.utils.mise import ntuple
 
 __all__ = ["AbstractTransform", "BaseTransform", "PerSampleTransform", "PerChannelTransform", "BaseTransformSeeded"]
 
