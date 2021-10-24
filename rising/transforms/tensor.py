@@ -1,9 +1,9 @@
 from typing import Dict, Optional, Sequence, Union
 
 import torch
-from torch.utils.data._utils.collate import default_convert
+from torch.utils.data._utils.collate import default_convert  # noqa
 
-from rising.transforms import AbstractTransform, BaseTransform
+from rising.transforms import BaseTransform
 from rising.transforms.functional import tensor_op, to_device_dtype
 
 __all__ = ["ToTensor", "ToDeviceDtype", "ToDevice", "ToDtype", "TensorOp", "Permute"]

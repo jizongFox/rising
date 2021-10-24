@@ -385,7 +385,7 @@ class BatchTransformer(object):
             batch = self._transform_call(batch, self._transforms)
 
         if self._auto_convert:
-            batch = default_convert(batch)
+            batch = default_convert(batch)  # convert to tensor
 
         return batch
 
@@ -442,7 +442,7 @@ class SampleTransformer(object):
         return sample
 
     def __len__(self) -> int:
-        return len(self.dataset)
+        return len(self.dataset)  # noqa
 
     def _change_pseudo_batch_dim(self, sample: Any, add: bool) -> Any:
         """

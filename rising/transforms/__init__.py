@@ -46,6 +46,7 @@ from rising.transforms.intensity import (
     RandomBezierTransform,
     RandomScaleValue,
     RandomValuePerChannel,
+    NormPercentile
 )
 from rising.transforms.kernel import GaussianSmoothing, KernelTransform
 from rising.transforms.painting import LocalPixelShuffle, RandomInOrOutpainting, RandomInpainting, RandomOutpainting

@@ -93,6 +93,33 @@ class NormRange(PerSampleTransform):
         )
 
 
+class NormPercentile(NormRange):
+
+    def forward(self, **data) -> dict:
+        """
+        Args:
+            data: dict with tensors
+
+        Returns:
+            dict: dict with augmented data
+        """
+        kwargs = {}
+        for k in self.property_names:
+            kwargs[k] = getattr(self, k)
+
+        kwargs.update(self.kwargs)
+        for _key in self.keys:
+            out = torch.empty_like(data[_key])
+            for _i in range(data[_key].shape[0]):
+                input_: torch.Tensor = data[_key][_i]
+                max_ = torch.quantile(input_, kwargs["max"])
+                min_ = torch.quantile(input_, kwargs["min"])
+                out[_i] = self.augment_fn(input_, out=out[_i], max=max_, min=min_,
+                                          **{k: v for k, v in kwargs.items() if k not in ("max", "min")})
+            data[_key] = out
+        return data
+
+
 class NormMinMax(PerSampleTransform):
     """Norm to [0, 1]"""
 

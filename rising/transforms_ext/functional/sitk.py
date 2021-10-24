@@ -1,6 +1,8 @@
 from typing import Union, Tuple
 
 import SimpleITK as sitk
+import numpy as np
+import torch
 
 from rising.utils import check_scalar
 
@@ -27,7 +29,8 @@ def itk_resample(image: sitk.Image, spacing: Union[float, Tuple[float, float, fl
     new_size = (round(ori_size[0] * (ori_spacing[0] / spacing[0])),
                 round(ori_size[1] * (ori_spacing[1] / spacing[1])),
                 round(ori_size[2] * (ori_spacing[2] / spacing[2])))
-    interp = {"linear": sitk.sitkLinear, "nearest": sitk.sitkNearestNeighbor}[interpolation]
+    interp = {"linear": sitk.sitkLinear, "nearest": sitk.sitkNearestNeighbor, "cosine": sitk.sitkCosineWindowedSinc}[
+        interpolation]
     return sitk.Resample(image, new_size, sitk.Transform(), interp, image.GetOrigin(), spacing, image.GetDirection(),
                          pad_value, image.GetPixelID())
 
@@ -44,3 +47,8 @@ def itk_clip(image: sitk.Image, low: int, high: int) -> sitk.Image:
     """
     assert low < high, (low, high)
     return sitk.Clamp(image, sitk.sitkInt16, low, high)
+
+
+def itk2tensor(image: sitk.Image, *, dtype=torch.float):
+    np_array = sitk.GetArrayFromImage(image).astype(np.float32, copy=False)
+    return torch.from_numpy(np_array).to(dtype)[None, ...]

@@ -19,6 +19,7 @@ from rising.transforms import (
     RandomAddValue,
     RandomScaleValue,
     RandomValuePerChannel,
+    NormPercentile
 )
 from tests.transforms import chech_data_preservation
 
@@ -51,6 +52,18 @@ class MyTestCase(unittest.TestCase):
         outp = trafo(**self.batch_dict)
         self.assertTrue(isclose(outp["data"].min().item(), 0.1, abs_tol=1e-6))
         self.assertTrue(isclose(outp["data"].max().item(), 0.2, abs_tol=1e-6))
+
+    def test_norm_percentile_transform(self):
+        trafo = NormPercentile(0.001, 0.99, per_channel=False)
+        self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
+
+        trafo = NormPercentile(0.001, 0.99, per_channel=True)
+        self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
+
+        outp = trafo(**self.batch_dict)
+        self.assertTrue(
+            isclose(outp["data"].min().item(), torch.quantile(self.batch_dict["data"], 0.001), abs_tol=1e-6))
+        self.assertTrue(isclose(outp["data"].max().item(), torch.quantile(self.batch_dict["data"], 0.99), abs_tol=1e-6))
 
     def test_norm_min_max_transform(self):
         trafo = NormMinMax(per_channel=False)

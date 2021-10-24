@@ -1,10 +1,10 @@
-from typing import Sequence, Tuple, Union
+from typing import Sequence, Tuple, Union, Type
 
 import torch
 
 from rising.random.abstract import AbstractParameter
 from rising.transforms.abstract import item_or_sequence, BaseTransform
-from rising.transforms_ext.functional.sitk import itk_resample, itk_clip
+from rising.transforms_ext.functional.sitk import itk_resample, itk_clip, itk2tensor
 
 SpacingParamType = Union[
     int, Sequence[int], float, Sequence[float], torch.Tensor, AbstractParameter, Sequence[AbstractParameter]
@@ -47,7 +47,7 @@ class SITKResample(BaseTransform):
 
 class SITKWindows(BaseTransform):
     """
-    simpleit windowsing class
+    simpleitk windows class
     """
 
     def __init__(self, low: IntNumType, high: IntNumType, *, keys: Sequence[str] = ("data",), **kwargs):
@@ -56,5 +56,17 @@ class SITKWindows(BaseTransform):
         self.register_sampler("high", high)
 
 
-if __name__ == '__main__':
-    transform = SITKResample(spacing=1, pad_value=0)
+class SITK2Tensor(BaseTransform):
+
+    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_sequence[Type[torch.float]] = torch.float,
+                 grad: bool = False, **kwargs):
+        super().__init__(itk2tensor, keys=keys, grad=grad, **kwargs)
+        self.dtype = self._tuple_generator(dtype)
+
+    def forward(self, **data) -> dict:
+        for key, dtype in zip(self.keys, self.dtype):
+            data[key] = self.augment_fn(
+                data[key],
+                dtype=dtype
+            )
+        return data
