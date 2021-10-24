@@ -1,5 +1,4 @@
-import random
-from typing import List, Sequence, Tuple, Union
+from typing import List, Sequence, Union
 
 import torch
 
@@ -74,7 +73,8 @@ def random_crop(
         size = [int(s) for s in size]
 
     if any([crop_dim + dist_dim >= img_dim for img_dim, crop_dim, dist_dim in zip(data.shape[2:], size, dist)]):
-        raise TypeError(f"Crop can not be realized with given size {size} and dist {dist}.")
+        raise TypeError(f"Crop can not be realized with given size {size} and dist {dist},"
+                        f" given data shape {list(data.shape[2:])}")
 
     corner = [
         torch.randint(0, img_dim - crop_dim - dist_dim, (1,)).item()

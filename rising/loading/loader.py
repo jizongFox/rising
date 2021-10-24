@@ -2,18 +2,17 @@ import collections
 import warnings
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Callable, Generator, Iterator, Mapping, Optional, Sequence, Union, Iterable
+from typing import Any, Callable, Generator, Iterator, Mapping, Optional, Sequence, Union
 
 import torch
 from threadpoolctl import threadpool_limits
-from torch import nn
 from torch.utils.data import DataLoader as _DataLoader
 from torch.utils.data import Dataset, Sampler
 from torch.utils.data._utils.collate import default_convert
 from torch.utils.data.dataloader import _MultiProcessingDataLoaderIter as __MultiProcessingDataLoaderIter
 from torch.utils.data.dataloader import _SingleProcessDataLoaderIter as __SingleProcessDataLoaderIter
 
-from rising.transforms.abstract import AbstractTransform
+from rising.utils.transforms import get_keys_from_transforms
 
 try:
     import numpy as np
@@ -26,22 +25,6 @@ from rising.loading.collate import do_nothing_collate
 from rising.transforms import Compose, ToDevice
 
 __all__ = ["DataLoader", "default_transform_call"]
-
-
-def iter_transform(transforms: Union[Compose, AbstractTransform, Sequence[AbstractTransform], nn.ModuleList]) -> \
-    Iterable[AbstractTransform]:
-    if isinstance(transforms, AbstractTransform) and not isinstance(transforms, Compose):
-        yield transforms
-    elif isinstance(transforms, Compose):
-        yield from iter_transform(transforms.transforms)
-    elif isinstance(transforms, Sequence):
-        for x in transforms:
-            yield from iter_transform(x)
-    elif isinstance(transforms, nn.ModuleList):
-        for x in transforms:
-            yield from iter_transform(x)  # noqa
-    else:
-        raise TypeError(transforms)
 
 
 def default_transform_call(batch: Any, transform: Callable) -> Any:
@@ -213,8 +196,7 @@ class DataLoader(_DataLoader):
             if device is None:
                 device = torch.cuda.current_device()
 
-            _keys = [transform.keys for transform in iter_transform(gpu_transforms)]  # noqa
-            keys = tuple(set([item for sublist in _keys for item in sublist]))
+            keys = get_keys_from_transforms(gpu_transforms)
             to_gpu_trafo = ToDevice(device=device, non_blocking=pin_memory, keys=keys)
 
             gpu_transforms = Compose(to_gpu_trafo, gpu_transforms)  # noqa

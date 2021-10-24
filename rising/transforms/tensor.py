@@ -6,7 +6,8 @@ from torch.utils.data._utils.collate import default_convert  # noqa
 from rising.transforms import BaseTransform
 from rising.transforms.functional import tensor_op, to_device_dtype
 
-__all__ = ["ToTensor", "ToDeviceDtype", "ToDevice", "ToDtype", "TensorOp", "Permute"]
+__all__ = ["ToTensor", "ToDeviceDtype", "ToDevice", "ToDtype", "TensorOp", "Permute", "TensorInsertDim",
+           "TensorRemoveDim"]
 
 
 class ToTensor(BaseTransform):
@@ -140,4 +141,38 @@ class Permute(BaseTransform):
         """
         for key, item in self.dims.items():
             data[key] = tensor_op(data[key], "permute", *item, **self.kwargs)
+        return data
+
+
+class TensorInsertDim(BaseTransform):
+    """
+    this is to insert a dimension to a PyTorch Tensor
+    """
+
+    def __init__(self, dim: int, keys: Sequence = ("data",), grad: bool = False, **kwargs):
+        super().__init__(None, keys=keys, grad=grad, property_names=(), **kwargs)
+        self.dim = dim
+
+    def forward(self, **data) -> dict:
+        for key in self.keys:
+            data[key] = data[key].unsqueeze(self.dim)
+        return data
+
+
+class TensorRemoveDim(BaseTransform):
+    """
+    this is to remove a dimension to a PyTorch Tensor
+    """
+
+    def __init__(self, dim: int, keys: Sequence = ("data",), grad: bool = False, **kwargs):
+        super().__init__(None, keys=keys, grad=grad, property_names=(), **kwargs)
+        self.dim = dim
+
+    def forward(self, **data) -> dict:
+        for key in self.keys:
+            prev_dim = data[key].dim()
+            data[key] = data[key].squeeze(self.dim)
+            assert data[key].dim() == prev_dim - 1, \
+                (f"{self.__class__.__name__} cannot remove dimension {self.dim}, "
+                 f"given shape {data[key].shape}.")
         return data

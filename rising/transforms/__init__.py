@@ -28,7 +28,7 @@ from rising.transforms.abstract import (
 )
 from rising.transforms.affine import Affine, BaseAffine, Resize, Rotate, Scale, StackedAffine, Translate
 from rising.transforms.channel import ArgMax, OneHot
-from rising.transforms.compose import Compose, DropoutCompose, OneOf
+from rising.transforms.compose import Compose, DropoutCompose, OneOf, SampleCompose
 from rising.transforms.crop import CenterCrop, RandomCrop
 from rising.transforms.format import FilterKeys, MapToSeq, PopKeys, RenameKeys, SeqToMap
 from rising.transforms.intensity import (

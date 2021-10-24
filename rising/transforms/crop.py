@@ -9,8 +9,8 @@ __all__ = ["CenterCrop", "RandomCrop"]
 
 class CenterCrop(BaseTransform):
     def __init__(
-            self, size: Union[int, Sequence, AbstractParameter], keys: Sequence = ("data",), grad: bool = False,
-            **kwargs
+        self, size: Union[int, Sequence, AbstractParameter], keys: Sequence = ("data",), grad: bool = False,
+        **kwargs
     ):
         """
         Args:
@@ -23,6 +23,10 @@ class CenterCrop(BaseTransform):
 
 
 class RandomCrop(BaseTransformSeeded):
+    """
+    todo: to enhance this function with padding function.
+    """
+
     def __init__(
         self,
         size: Union[int, Sequence, AbstractParameter],
