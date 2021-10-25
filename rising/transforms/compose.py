@@ -23,6 +23,9 @@ def dict_call(batch: dict, transform: Callable) -> Any:
     Returns:
         Any: transformed batch
     """
+    if not isinstance(batch, Mapping):
+        raise RuntimeError(
+            f"You may want to pass `default_transform_call` from rising.loading as `transform_call` to `Compose`")
     return transform(**batch)
 
 

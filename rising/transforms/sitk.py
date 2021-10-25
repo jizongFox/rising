@@ -71,10 +71,18 @@ class SITKWindows(BaseTransform):
 
 class SITK2Tensor(BaseTransform):
 
-    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_sequence = torch.float,
+    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_sequence[torch.dtype] = torch.float,
+                 insert_dim: int = None,
                  grad: bool = False, **kwargs):
+        """
+        Convert sitk image to Tensor
+        Args:
+            dtype: tensor's dtype
+            insert_dim: type: int, if you need to expand the tensor given specific dimension, default None,
+        """
         super().__init__(itk2tensor, keys=keys, grad=grad, **kwargs)
         self.dtype = self._tuple_generator(dtype)
+        self.insert_dim = None
 
     def forward(self, **data) -> dict:
         for key, dtype in zip(self.keys, self.dtype):
@@ -82,4 +90,6 @@ class SITK2Tensor(BaseTransform):
                 data[key],
                 dtype=dtype
             )
+            if self.insert_dim is not None:
+                data[key] = data[key].unsqueeze(self.insert_dim)
         return data
