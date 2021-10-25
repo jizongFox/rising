@@ -7,6 +7,11 @@ __pycache__
 *.pyc
 *.idea
 *.DS_Store
+notebooks/MedNIST.tar.gz
+notebooks/MedNIST/
+notebooks/demo_classification.py
+tests/integration/
+tmp.py
 
 # data which is automatically downloaded inside notebooks
 notebooks/ExBox3
