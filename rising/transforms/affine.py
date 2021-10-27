@@ -2,7 +2,7 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
-from rising.transforms.abstract import BaseTransform, item_or_sequence
+from rising.transforms.abstract import BaseTransform, item_or_seq
 from rising.transforms.functional.affine import AffineParamType, affine_image_transform, parametrize_matrix
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 from rising.utils.checktype import check_scalar
@@ -32,9 +32,9 @@ class Affine(BaseTransform):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         **kwargs,
@@ -234,9 +234,9 @@ class StackedAffine(Affine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
         **kwargs,
     ):
@@ -334,9 +334,9 @@ class BaseAffine(Affine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         **kwargs,
@@ -478,9 +478,9 @@ class Rotate(BaseAffine):
         degree: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
         **kwargs,
     ):
@@ -554,9 +554,9 @@ class Translate(BaseAffine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         unit: str = "pixel",
         reverse_order: bool = False,
         **kwargs,
@@ -649,9 +649,9 @@ class Scale(BaseAffine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
         **kwargs,
     ):
@@ -722,9 +722,9 @@ class Resize(Scale):
         size: Union[int, Tuple[int]],
         keys: Sequence[str] = ("data",),
         grad: bool = False,
-        interpolation_mode: item_or_sequence[str] = "bilinear",
-        padding_mode: item_or_sequence[str] = "zeros",
-        align_corners: item_or_sequence[bool] = False,
+        interpolation_mode: item_or_seq[str] = "bilinear",
+        padding_mode: item_or_seq[str] = "zeros",
+        align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
         **kwargs,
     ):

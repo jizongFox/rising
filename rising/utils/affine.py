@@ -106,7 +106,7 @@ def get_batched_eye(
     batchsize: int,
     ndim: int,
     device: Optional[Union[torch.device, str]] = None,
-    dtype: Optional[Union[torch.dtype, str]] = None,
+    dtype: torch.dtype = torch.float,
 ) -> torch.Tensor:
     """
     Produces a batched matrix containing 1s on the diagonal
@@ -119,14 +119,14 @@ def get_batched_eye(
         device : torch.device, str, optional
             the device to put the resulting tensor to. Defaults to the default
             device
-        dtype : torch.dtype, str, optional
-            the dtype of the resulting trensor. Defaults to the default dtype
+        dtype : torch.dtype,  optional
+            the dtype of the resulting tensor. Defaults to the default torch.float
 
     Returns:
         torch.Tensor: batched eye matrix
 
     """
-    return torch.eye(ndim, device=device, dtype=dtype).view(1, ndim, ndim).expand(batchsize, -1, -1).clone()
+    return torch.eye(ndim, device=device, dtype=dtype)[None, ...].expand(batchsize, -1, -1).clone()
 
 
 def deg_to_rad(angles: Union[torch.Tensor, float, int]) -> Union[torch.Tensor, float, int]:
