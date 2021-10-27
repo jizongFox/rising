@@ -10,7 +10,7 @@ from rising.transforms.abstract import AbstractTransform, BaseTransform
 
 __all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "SizeStepScheduler"]
 
-from rising.transforms.abstract import item_or_sequence
+from rising.transforms.abstract import item_or_seq
 from rising.transforms.functional import mirror, resize_native, rot90
 from rising.utils import check_scalar
 
@@ -143,8 +143,8 @@ class ResizeNative(BaseTransform):
     def __init__(
         self,
         size: Union[int, Sequence[int]],
-        mode: item_or_sequence[str] = "nearest",
-        align_corners: item_or_sequence[bool] = None,
+        mode: item_or_seq[str] = "nearest",
+        align_corners: item_or_seq[bool] = None,
         preserve_range: bool = False,
         keys: Sequence[str] = ("data",),
         grad: bool = False,
@@ -256,8 +256,8 @@ class ProgressiveResize(ResizeNative):
     def __init__(
         self,
         scheduler: scheduler_type,
-        mode: item_or_sequence[str] = "nearest",
-        align_corners: item_or_sequence[bool] = None,
+        mode: item_or_seq[str] = "nearest",
+        align_corners: item_or_seq[bool] = None,
         preserve_range: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,

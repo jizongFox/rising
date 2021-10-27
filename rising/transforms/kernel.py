@@ -4,8 +4,9 @@ from typing import Callable, Sequence, Union
 import torch
 
 from rising.utils import check_scalar
-
-from .abstract import AbstractTransform
+from torch.nn import functional as F
+from .abstract import AbstractTransform, item_or_seq
+from rising.utils.mise import ntuple
 
 __all__ = ["KernelTransform", "GaussianSmoothing"]
 
@@ -19,12 +20,12 @@ class KernelTransform(AbstractTransform):
     def __init__(
         self,
         in_channels: int,
-        kernel_size: Union[int, Sequence],
+        kernel_size: item_or_seq[int],
         dim: int = 2,
-        stride: Union[int, Sequence] = 1,
-        padding: Union[int, Sequence] = 0,
+        stride: item_or_seq[int] = 1,
+        padding: item_or_seq[int] = 0,
         padding_mode: str = "zero",
-        keys: Sequence = ("data",),
+        keys: Sequence[str] = ("data",),
         grad: bool = False,
         **kwargs
     ):
@@ -45,6 +46,9 @@ class KernelTransform(AbstractTransform):
             :func:`torch.functional.pad`
         """
         super().__init__(grad=grad, **kwargs)
+        self.keys = keys
+        self._tuple_generator = ntuple(len(self.keys))
+
         self.in_channels = in_channels
 
         if check_scalar(kernel_size):
@@ -59,8 +63,7 @@ class KernelTransform(AbstractTransform):
             padding = [padding] * dim * 2
         self.padding = padding
 
-        self.padding_mode = padding_mode
-        self.keys = keys
+        self.padding_mode = self._tuple_generator(padding_mode)
 
         kernel = self.create_kernel()
         self.register_buffer("weight", kernel)
@@ -79,11 +82,11 @@ class KernelTransform(AbstractTransform):
             Callable: the suitable convolutional function
         """
         if dim == 1:
-            return torch.nn.functional.conv1d
+            return F.conv1d
         elif dim == 2:
-            return torch.nn.functional.conv2d
+            return F.conv2d
         elif dim == 3:
-            return torch.nn.functional.conv3d
+            return F.conv3d
         else:
             raise TypeError("Only 1, 2 and 3 dimensions are supported. Received {}.".format(dim))
 
@@ -103,8 +106,8 @@ class KernelTransform(AbstractTransform):
         Returns:
             dict: dict with transformed data
         """
-        for key in self.keys:
-            inp_pad = torch.nn.functional.pad(data[key], self.padding, mode=self.padding_mode)
+        for key, padding_mode in zip(self.keys, self.padding_mode):
+            inp_pad = F.pad(data[key], self.padding, mode=padding_mode)
             data[key] = self.conv(inp_pad, weight=self.weight, groups=self.groups, stride=self.stride)
         return data
 
@@ -112,7 +115,7 @@ class KernelTransform(AbstractTransform):
 class GaussianSmoothing(KernelTransform):
     """
     Perform Gaussian Smoothing.
-    Filtering is performed seperately for each channel in the input using a
+    Filtering is performed separately for each channel in the input using a
     depthwise convolution.
     This code is adapted from:
     'https://discuss.pytorch.org/t/is-there-anyway-to-do-'
@@ -122,13 +125,13 @@ class GaussianSmoothing(KernelTransform):
     def __init__(
         self,
         in_channels: int,
-        kernel_size: Union[int, Sequence],
-        std: Union[int, Sequence],
+        kernel_size: item_or_seq[int],
+        std: item_or_seq[float],
         dim: int = 2,
-        stride: Union[int, Sequence] = 1,
-        padding: Union[int, Sequence] = 0,
-        padding_mode: str = "reflect",
-        keys: Sequence = ("data",),
+        stride: item_or_seq[int] = 1,
+        padding: item_or_seq[int] = 0,
+        padding_mode: item_or_seq[str] = "constant",
+        keys: Sequence[str] = ("data",),
         grad: bool = False,
         **kwargs
     ):

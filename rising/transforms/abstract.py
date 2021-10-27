@@ -5,14 +5,14 @@ import torch
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import ntuple
 
-__all__ = ["AbstractTransform", "item_or_sequence", "BaseTransform", "PerSampleTransform", "PerChannelTransform",
+__all__ = ["AbstractTransform", "item_or_seq", "BaseTransform", "PerSampleTransform", "PerChannelTransform",
            "BaseTransformSeeded"]
 
 augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
 T = TypeVar("T")
-item_or_sequence = Union[T, Sequence[T]]
+item_or_seq = Union[T, Sequence[T]]
 
 
 class AbstractTransform(torch.nn.Module):

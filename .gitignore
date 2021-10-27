@@ -16,7 +16,7 @@ notebooks/demo_classification.py
 
 # C extensions
 *.so
-
+notebooks/MedNIST
 # Distribution / packaging
 .Python
 build/

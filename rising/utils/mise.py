@@ -3,10 +3,13 @@ from itertools import repeat
 
 import numpy as np
 from torch import Tensor
+import typing as t
+
+T = t.TypeVar("T")
 
 
-def ntuple(n):
-    def parse(x):
+def ntuple(n: int) -> t.Callable[[t.Union[T, t.Sequence[T]]], t.Sequence[T]]:
+    def parse(x: t.Union[T, t.Sequence[T]]) -> t.Sequence[T]:
         if isinstance(x, (Tensor, np.ndarray, str)):
             return tuple(repeat(x, n))
         if isinstance(x, collections.abc.Iterable):

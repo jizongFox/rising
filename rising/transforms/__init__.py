@@ -31,6 +31,8 @@ from rising.transforms.channel import ArgMax, OneHot
 from rising.transforms.compose import Compose, DropoutCompose, OneOf, SampleCompose
 from rising.transforms.crop import CenterCrop, RandomCrop
 from rising.transforms.format import FilterKeys, MapToSeq, PopKeys, RenameKeys, SeqToMap
+from rising.transforms.grid import GridTransform, StackedGridTransform, RandomCropGrid, CenterCropGrid, \
+    ElasticDistortion, RadialDistortion
 from rising.transforms.intensity import (
     Clamp,
     ExponentialNoise,
