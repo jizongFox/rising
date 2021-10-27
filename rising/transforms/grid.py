@@ -103,13 +103,13 @@ class StackedGridTransform(GridTransform):
                 transforms = transforms[0]
         self.transforms = transforms
 
-    def create_grid(self, input_size: Sequence[Sequence[int]], matrix: Tensor = None) -> \
-        Dict[Tuple, Tensor]:
-        return self.transforms[0].create_grid(input_size=input_size, matrix=matrix)
+    def create_grid(self, data: Dict[str, Tensor], matrix: Tensor = None, *, device: torch.device,
+                    dtype: torch.dtype) -> Dict[str, Tensor]:
+        return self.transforms[0].create_grid(data=data, matrix=matrix, device=device, dtype=dtype)
 
-    def augment_grid(self, grid: Tensor) -> Tensor:
+    def augment_grid(self, grid: Dict[str, Tensor], *, device, dtype) -> Dict[str, Tensor]:
         for transform in self.transforms:
-            grid = transform.augment_grid(grid)
+            grid = transform.augment_grid(grid, device=device, dtype=dtype)
         return grid
 
 

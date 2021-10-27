@@ -3,7 +3,7 @@ from typing import Sequence, Tuple, Union
 import torch
 
 from rising.random.abstract import AbstractParameter
-from rising.transforms.abstract import item_or_sequence, BaseTransform
+from rising.transforms.abstract import BaseTransform, item_or_seq
 from rising.transforms.functional.sitk import itk_resample, itk_clip, itk2tensor
 
 SpacingParamType = Union[
@@ -20,7 +20,7 @@ class SITKResample(BaseTransform):
     """
 
     def __init__(self, spacing: SpacingParamType, *, pad_value: Union[int, float], keys: Sequence = ("data",),
-                 interpolation: item_or_sequence[str] = "nearest", **kwargs):
+                 interpolation: item_or_seq[str] = "nearest", **kwargs):
         """
         resample simpleitk image given new spacing and padding value
         Args:
@@ -71,7 +71,7 @@ class SITKWindows(BaseTransform):
 
 class SITK2Tensor(BaseTransform):
 
-    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_sequence[torch.dtype] = torch.float,
+    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_seq[torch.dtype] = torch.float,
                  insert_dim: int = None,
                  grad: bool = False, **kwargs):
         """

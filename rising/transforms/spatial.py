@@ -24,7 +24,7 @@ class Mirror(AbstractTransform):
             self,
             dims: Union[int, DiscreteParameter, Sequence[Union[int, DiscreteParameter]]],
             keys: Sequence[str] = ("data",),
-            prob: item_or_sequence[float] = 0.5,
+            prob: item_or_seq[float] = 0.5,
             grad: bool = False,
             **kwargs
     ):

@@ -336,7 +336,7 @@ class BaseAffine(Affine):
         adjust_size: bool = False,
         interpolation_mode: item_or_seq[str] = "bilinear",
         padding_mode: item_or_seq[str] = "zeros",
-        align_corners: item_or_seq[bool] = False,
+        align_corners: item_or_seq[Optional[bool]] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         **kwargs,
