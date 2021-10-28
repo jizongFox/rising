@@ -14,7 +14,14 @@ SpacingTypeOrTuple = Union[SpacingParamType, Tuple[SpacingParamType, SpacingPara
 IntNumType = Union[int, AbstractParameter]
 
 
-class SITKResample(BaseTransform):
+class _ITKTransform:
+    """
+    this mixin indicates if the transform is Tensor-based, use to not shuffle in Compose.
+    """
+    pass
+
+
+class SITKResample(_ITKTransform, BaseTransform):
     """
         simpleitk resampling class
     """
@@ -45,7 +52,7 @@ class SITKResample(BaseTransform):
         return data
 
 
-class SITKWindows(BaseTransform):
+class SITKWindows(_ITKTransform, BaseTransform):
     """
     simpleitk windows class
     """
@@ -69,7 +76,7 @@ class SITKWindows(BaseTransform):
         return data
 
 
-class SITK2Tensor(BaseTransform):
+class SITK2Tensor(_ITKTransform, BaseTransform):
 
     def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_seq[torch.dtype] = torch.float,
                  insert_dim: int = None,
@@ -82,7 +89,7 @@ class SITK2Tensor(BaseTransform):
         """
         super().__init__(itk2tensor, keys=keys, grad=grad, **kwargs)
         self.dtype = self._tuple_generator(dtype)
-        self.insert_dim = None
+        self.insert_dim = insert_dim
 
     def forward(self, **data) -> dict:
         for key, dtype in zip(self.keys, self.dtype):

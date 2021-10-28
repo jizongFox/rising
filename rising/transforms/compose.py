@@ -1,15 +1,14 @@
-from random import shuffle, sample
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
+import numpy as np
 import torch
 
 from rising.random import ContinuousParameter, UniformParameter
 from rising.transforms import AbstractTransform
+from rising.transforms.sitk import _ITKTransform
 from rising.utils import check_scalar
 
-__all__ = ["Compose", "DropoutCompose", "OneOf", "SampleCompose"]
-
-from rising.utils.transforms import get_keys_from_transforms
+__all__ = ["Compose", "DropoutCompose", "OneOf", ]
 
 
 def dict_call(batch: dict, transform: Callable) -> Any:
@@ -109,7 +108,7 @@ class Compose(AbstractTransform):
         data = seq_like if seq_like else map_like
 
         if self.shuffle:
-            shuffle(self.transform_order)
+            self.shuffle_transform()
 
         for idx in self.transform_order:
             data = self.transform_call(data, self.transforms[idx])
@@ -168,7 +167,22 @@ class Compose(AbstractTransform):
         self._shuffle = shuffle
         self.transform_order = list(range(len(self.transforms)))
 
+    def shuffle_transform(self):
+        """
+        this function shuffles the Tensor transformation, and exclude all others such as ITK based ones.
+        """
+        tensor_transform_indicator = []
+        for i, trans in enumerate(self.transforms):
+            assert isinstance(trans, AbstractTransform)
+            if not isinstance(trans, _ITKTransform):
+                tensor_transform_indicator.append(i)
+        transform_mapping = {k: v for k, v in zip(
+            tensor_transform_indicator, np.random.permutation(tensor_transform_indicator)
+        )}
+        self.transform_order = [transform_mapping.get(i, i) for i in self.transform_order]
 
+
+''' we delete this function.
 class SampleCompose(Compose):
     """
     Since every transformation takes dimension of `batch`, `feature_channel`, H, W, (D),
@@ -248,6 +262,7 @@ class SampleCompose(Compose):
         for idx in self.transform_order:
             data = self.transform_call(data, self.transforms[idx])
         return data
+'''
 
 
 class DropoutCompose(Compose):
