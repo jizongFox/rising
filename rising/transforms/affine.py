@@ -336,7 +336,7 @@ class BaseAffine(Affine):
         adjust_size: bool = False,
         interpolation_mode: item_or_seq[str] = "bilinear",
         padding_mode: item_or_seq[str] = "zeros",
-        align_corners: item_or_seq[bool] = False,
+        align_corners: item_or_seq[Optional[bool]] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         **kwargs,
@@ -375,6 +375,14 @@ class BaseAffine(Affine):
                 calculated dynamically to ensure that the whole image fits.
             interpolation_mode: interpolation mode to calculate output values
                 ``'bilinear'`` | ``'nearest'``. Default: ``'bilinear'``
+                documents from PyTorch:
+                mode (str) – interpolation mode to calculate output values 'bilinear'
+                | 'nearest' | 'bicubic'. Default: 'bilinear'
+                Note: mode='bicubic' supports only 4-D input.
+                When mode='bilinear' and the input is 5-D, the interpolation mode used
+                internally will actually be trilinear. However, when the input is 4-D,
+                the interpolation mode will legitimately be bilinear.
+
             padding_mode: padding mode for outside grid values
                 ``'zeros'`` | ``'border'`` | ``'reflection'``.
                 Default: ``'zeros'``

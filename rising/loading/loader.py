@@ -12,6 +12,8 @@ from torch.utils.data._utils.collate import default_convert
 from torch.utils.data.dataloader import _MultiProcessingDataLoaderIter as __MultiProcessingDataLoaderIter
 from torch.utils.data.dataloader import _SingleProcessDataLoaderIter as __SingleProcessDataLoaderIter
 
+from rising.utils.transforms import get_keys_from_transforms
+
 try:
     import numpy as np
 
@@ -194,9 +196,10 @@ class DataLoader(_DataLoader):
             if device is None:
                 device = torch.cuda.current_device()
 
-            to_gpu_trafo = ToDevice(device=device, non_blocking=pin_memory)
+            keys = get_keys_from_transforms(gpu_transforms)
+            to_gpu_trafo = ToDevice(device=device, non_blocking=pin_memory, keys=keys)
 
-            gpu_transforms = Compose(to_gpu_trafo, gpu_transforms)
+            gpu_transforms = Compose(to_gpu_trafo, gpu_transforms)  # noqa
             gpu_transforms = gpu_transforms.to(device)
 
         self.device = device
@@ -385,7 +388,7 @@ class BatchTransformer(object):
             batch = self._transform_call(batch, self._transforms)
 
         if self._auto_convert:
-            batch = default_convert(batch)
+            batch = default_convert(batch)  # convert to tensor
 
         return batch
 
@@ -442,7 +445,7 @@ class SampleTransformer(object):
         return sample
 
     def __len__(self) -> int:
-        return len(self.dataset)
+        return len(self.dataset)  # noqa
 
     def _change_pseudo_batch_dim(self, sample: Any, add: bool) -> Any:
         """

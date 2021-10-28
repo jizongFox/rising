@@ -1,9 +1,9 @@
 import collections
+import typing as t
 from itertools import repeat
 
 import numpy as np
 from torch import Tensor
-import typing as t
 
 T = t.TypeVar("T")
 

@@ -48,7 +48,7 @@ class DiscreteParameter(AbstractParameter):
             if weights is not None or cum_weights is not None:
                 raise ValueError("weights and cum_weights should only be specified if " "replacement is set to True!")
 
-            sample_fn = sample_without_replacement
+            sample_fn = sample_without_replacement  # noqa
 
         self.sample_fn = sample_fn
         self.population = population
