@@ -17,6 +17,7 @@ __all__ = [
     "clamp",
     "bezier_3rd_order",
     "random_inversion",
+    "norm_min_max_percentile"
 ]
 
 
@@ -95,6 +96,36 @@ def norm_min_max(
     else:
         out = _norm(data, out)
     return out
+
+
+def norm_min_max_percentile(data: torch.Tensor, low_percentile, high_percentile, per_channel: bool = True,
+                            out: Optional[torch.Tensor] = None, eps=1e-8):
+    """
+    Normalize data based on min and max percentile between 0 - 100.
+    Args:
+        data: input data, under form of [C,H,W] and [C,H,W,D].
+        low_percentile: low percentile to clamp,  between 0 and 100
+        high_percentile: high percentile to clam, between 0 and 100
+        per_channel: if compute the percentile on channel
+        out:
+        eps: small eps to prevent division by 0.l
+    Returns:
+        torch.Tensor: normalized data
+    """
+    if out is None:
+        out = torch.empty_like(data)
+
+    if per_channel:
+        for i, data_ in enumerate(data):
+            min_ = torch.quantile(data_, low_percentile)
+            max_ = torch.quantile(data_, high_percentile)
+            out[i] = clamp(data_, min=float(min_), max=float(max_), out=out[i])
+    else:
+        max_ = torch.quantile(data, low_percentile)
+        min_ = torch.quantile(data, high_percentile)
+        out = clamp(data, min=float(min_), max=float(max_), out=out)
+
+    return norm_min_max(out, per_channel=per_channel, out=out, eps=eps)
 
 
 def norm_zero_mean_unit_std(
@@ -273,7 +304,6 @@ def random_inversion(
     minv: float = 0.0,
     out: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
-
     if torch.rand((1)) < prob_inversion:
         # Inversion of curve
         out = maxv + minv - data

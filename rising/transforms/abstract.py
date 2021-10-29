@@ -1,4 +1,4 @@
-from typing import Any, Callable, Sequence, Tuple, TypeVar, Union
+from typing import Any, Callable, Sequence, Tuple, TypeVar, Union, Dict
 
 import torch
 
@@ -134,7 +134,7 @@ class BaseTransform(AbstractTransform):
         self,
         augment_fn: augment_callable,
         *args,
-        keys: Sequence = ("data",),
+        keys: Sequence[str] = ("data",),
         grad: bool = False,
         property_names: Sequence[str] = (),
         **kwargs
@@ -160,7 +160,7 @@ class BaseTransform(AbstractTransform):
             self.register_sampler(name, val)
         self._tuple_generator = ntuple(len(self.keys))
 
-    def forward(self, **data) -> dict:
+    def forward(self, **data) -> Dict[str, Any]:
         """
         Apply transformation
 
@@ -205,7 +205,7 @@ class BaseTransformSeeded(BaseTransform):
 
         seed = torch.random.get_rng_state()
         for _key in self.keys:
-            torch.random.set_rng_state(seed)
+            torch.random.set_rng_state(seed)  # noqa
             data[_key] = self.augment_fn(data[_key], *self.args, **kwargs)
         return data
 
