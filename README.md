@@ -27,6 +27,11 @@ Multiple examples for different use cases can be found in our [tutorial docs](ht
 [Example Transformation Output](https://rising.readthedocs.io/en/latest/transformations.html),
 [Integration of External Frameworks](https://rising.readthedocs.io/en/latest/external_augmentation.html)
 
+## What I have modified from the original repo?
+
+I noticed that rising under its current form has small bugs and inconsistency in terms of design and performance, especially for medical image segmentation task with 3D volumes. Based on project requirement, several improvements have been made so that it can now enjoy a better compatibility with 3D datas and intenstive augmentation operations using GPUs. Issues and PRs are welcome.
+
+
 ## Why another framework?
 
 |            | rising  |   TorchIO    | Batchgenerators | Kornia  | DALI | Vanilla PyTorch | Albumentations |
