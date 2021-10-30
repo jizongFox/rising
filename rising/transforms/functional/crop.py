@@ -1,4 +1,4 @@
-from typing import Union, Sequence
+from typing import Sequence, Union
 
 import torch
 
@@ -7,8 +7,7 @@ from rising.utils import check_scalar
 __all__ = ["crop", "center_crop", "random_crop"]
 
 
-def crop(data: torch.Tensor, corner: Sequence[int], size: Sequence[int],
-         grid_crop: bool = False):
+def crop(data: torch.Tensor, corner: Sequence[int], size: Sequence[int], grid_crop: bool = False):
     """
     Extract crop from last dimensions of data
 
@@ -43,8 +42,7 @@ def crop(data: torch.Tensor, corner: Sequence[int], size: Sequence[int],
     return data[_slices]
 
 
-def center_crop(data: torch.Tensor, size: Union[int, Sequence[int]],
-                grid_crop: bool = False) -> torch.Tensor:
+def center_crop(data: torch.Tensor, size: Union[int, Sequence[int]], grid_crop: bool = False) -> torch.Tensor:
     """
     Crop patch from center
 
@@ -75,13 +73,13 @@ def center_crop(data: torch.Tensor, size: Union[int, Sequence[int]],
     else:
         data_shape = data.shape[2:]
 
-    corner = [int(round((img_dim - crop_dim) / 2.)) for img_dim, crop_dim in zip(data_shape, size)]
+    corner = [int(round((img_dim - crop_dim) / 2.0)) for img_dim, crop_dim in zip(data_shape, size)]
     return crop(data, corner, size, grid_crop=grid_crop)
 
 
-def random_crop(data: torch.Tensor, size: Union[int, Sequence[int]],
-                dist: Union[int, Sequence[int]] = 0,
-                grid_crop: bool = False) -> torch.Tensor:
+def random_crop(
+    data: torch.Tensor, size: Union[int, Sequence[int]], dist: Union[int, Sequence[int]] = 0, grid_crop: bool = False
+) -> torch.Tensor:
     """
     Crop random patch/volume from input tensor
 
@@ -117,8 +115,12 @@ def random_crop(data: torch.Tensor, size: Union[int, Sequence[int]],
         data_shape = data.shape[2:]
 
     if any([crop_dim + dist_dim > img_dim for img_dim, crop_dim, dist_dim in zip(data_shape, size, dist)]):
-        raise TypeError(f"Crop can not be realized with given size {size} and dist {dist}.")
+        raise TypeError(
+            f"Crop can not be realized with given size {size} and dist {dist}, " f"given input shape {data_shape}"
+        )
 
-    corner = [int(torch.randint(0, max(int(img_dim - crop_dim - dist_dim), 1), (1,))) for
-              img_dim, crop_dim, dist_dim in zip(data_shape, size, dist)]
+    corner = [
+        int(torch.randint(0, max(int(img_dim - crop_dim - dist_dim), 1), (1,)))
+        for img_dim, crop_dim, dist_dim in zip(data_shape, size, dist)
+    ]
     return crop(data, corner, size, grid_crop=grid_crop)

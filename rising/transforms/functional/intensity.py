@@ -17,7 +17,7 @@ __all__ = [
     "clamp",
     "bezier_3rd_order",
     "random_inversion",
-    "norm_min_max_percentile"
+    "norm_min_max_percentile",
 ]
 
 
@@ -98,8 +98,14 @@ def norm_min_max(
     return out
 
 
-def norm_min_max_percentile(data: torch.Tensor, low_percentile, high_percentile, per_channel: bool = True,
-                            out: Optional[torch.Tensor] = None, eps=1e-8):
+def norm_min_max_percentile(
+    data: torch.Tensor,
+    low_percentile: float,
+    high_percentile: float,
+    per_channel: bool = True,
+    out: Optional[torch.Tensor] = None,
+    eps=1e-8,
+):
     """
     Normalize data based on min and max percentile between 0 - 100.
     Args:
@@ -117,12 +123,12 @@ def norm_min_max_percentile(data: torch.Tensor, low_percentile, high_percentile,
 
     if per_channel:
         for i, data_ in enumerate(data):
-            min_ = torch.quantile(data_, low_percentile)
-            max_ = torch.quantile(data_, high_percentile)
+            min_ = torch.quantile(data_.float(), float(low_percentile))
+            max_ = torch.quantile(data_.float(), float(high_percentile))
             out[i] = clamp(data_, min=float(min_), max=float(max_), out=out[i])
     else:
-        max_ = torch.quantile(data, low_percentile)
-        min_ = torch.quantile(data, high_percentile)
+        max_ = torch.quantile(data, float(low_percentile))
+        min_ = torch.quantile(data, float(high_percentile))
         out = clamp(data, min=float(min_), max=float(max_), out=out)
 
     return norm_min_max(out, per_channel=per_channel, out=out, eps=eps)

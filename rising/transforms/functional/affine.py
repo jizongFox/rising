@@ -205,7 +205,7 @@ def create_rotation(
     """
     if rotation is None:
         rotation = 0
-    num_rot_params = 1 if ndim == 2 else ndim
+    num_rot_params = 1 if ndim == 2 else ndim  # this prevents to put 2 dimensional input for 2d images.
 
     rotation = expand_scalar_param(rotation, batchsize, num_rot_params).to(device=device, dtype=dtype)
     if degree:

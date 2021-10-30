@@ -2,6 +2,7 @@ import unittest
 
 import torch
 
+from rising.random import UniformParameter
 from rising.transforms.affine import Affine, BaseAffine, Resize, Rotate, Scale, StackedAffine, Translate
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 
@@ -158,6 +159,18 @@ class AffineTestCase(unittest.TestCase):
 
         trafo.assemble_matrix(**sample)
         self.assertTrue(expected.allclose(expected))
+
+    def test_affine_prob(self):
+        image = torch.randn(13, 1, 224, 224)
+        prob = torch.randn(13, 1, 224, 224)
+        translate = BaseAffine(
+            rotation=(UniformParameter(-10, 10), UniformParameter(-10, 10)),
+            degree=True,
+            scale=(UniformParameter(-10, 10), UniformParameter(-10, 10)),
+            keys=("data", "prob"),
+        )
+        image_, prob_ = translate(data=image, prob=prob).values()
+        pass
 
 
 if __name__ == "__main__":

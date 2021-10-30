@@ -2,11 +2,12 @@ import math
 from typing import Callable, Sequence, Union
 
 import torch
+from torch.nn import functional as F
 
 from rising.utils import check_scalar
-from torch.nn import functional as F
-from .abstract import AbstractTransform, item_or_seq
 from rising.utils.mise import ntuple
+
+from .abstract import AbstractTransform, item_or_seq
 
 __all__ = ["KernelTransform", "GaussianSmoothing"]
 
@@ -106,8 +107,11 @@ class KernelTransform(AbstractTransform):
         Returns:
             dict: dict with transformed data
         """
+        dtype = data[self.keys[0]].dtype
+        self.to(dtype)
         for key, padding_mode in zip(self.keys, self.padding_mode):
             inp_pad = F.pad(data[key], self.padding, mode=padding_mode)
+
             data[key] = self.conv(inp_pad, weight=self.weight, groups=self.groups, stride=self.stride)
         return data
 

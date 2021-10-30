@@ -9,6 +9,7 @@ __pycache__
 *.DS_Store
 tmp*
 tests/integration/
+zz*
 # data which is automatically downloaded inside notebooks
 notebooks/ExBox3
 notebooks/MedNIST.tar.gz
