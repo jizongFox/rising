@@ -30,6 +30,7 @@ Multiple examples for different use cases can be found in our [tutorial docs](ht
 ## What I have modified from the original repo?
 
 I noticed that rising under its current form has small bugs and inconsistency in terms of design and performance, especially for medical image segmentation task with 3D volumes. Based on project requirement, several improvements have been made so that it can now enjoy a better compatibility with 3D datas and intenstive augmentation operations using GPUs. Issues and PRs are welcome.
+Thanks a lot @Yuxiang1990 for the kind PR.
 
 
 ## Why another framework?
