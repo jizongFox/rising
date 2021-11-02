@@ -27,6 +27,6 @@ def iter_transform(transforms: Union['Compose', 'AbstractTransform', Sequence['A
 
 
 def get_keys_from_transforms(transforms) -> Sequence[str]:
-    _keys = [transform.keys for transform in iter_transform(transforms)]
+    _keys = [transform.keys for transform in iter_transform(transforms) if hasattr(transform, "keys")]
     keys = tuple(set([item for sublist in _keys for item in sublist]))
     return keys
