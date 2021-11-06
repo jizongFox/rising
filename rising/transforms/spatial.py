@@ -73,9 +73,10 @@ class Mirror(AbstractTransform):
             prob = self.prob
 
         seed = torch.random.get_rng_state()
+        dims = self.dims
         for key in self.keys:
             torch.random.set_rng_state(seed)
-            for dim, p in zip(self.dims, prob):
+            for dim, p in zip(dims, prob):
                 if torch.rand(1) < p:
                     data[key] = mirror(data[key], dim)
         return data
