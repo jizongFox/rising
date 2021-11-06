@@ -1,18 +1,24 @@
-from typing import Any, Callable, Sequence, Tuple, TypeVar, Union, Dict
+from typing import Any, Callable, Dict, Sequence, Tuple, TypeVar, Union
 
 import torch
 
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import ntuple
 
-__all__ = ["AbstractTransform", "item_or_seq", "BaseTransform", "PerSampleTransform", "PerChannelTransform",
-           "BaseTransformSeeded"]
+T = TypeVar("T")
+item_or_seq = Union[T, Sequence[T]]
 
 augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
-T = TypeVar("T")
-item_or_seq = Union[T, Sequence[T]]
+__all__ = [
+    "AbstractTransform",
+    "item_or_seq",
+    "BaseTransform",
+    "PerSampleTransform",
+    "PerChannelTransform",
+    "BaseTransformSeeded",
+]
 
 
 class AbstractTransform(torch.nn.Module):
@@ -65,8 +71,7 @@ class AbstractTransform(torch.nn.Module):
 
             if len(sample_result) == 1:
                 return sample_result[0]
-            else:
-                return sample_result
+            return sample_result
 
         setattr(self, name, property(sample))
 
@@ -205,7 +210,7 @@ class BaseTransformSeeded(BaseTransform):
 
         seed = torch.random.get_rng_state()
         for _key in self.keys:
-            torch.random.set_rng_state(seed)  # noqa
+            torch.random.set_rng_state(seed)
             data[_key] = self.augment_fn(data[_key], *self.args, **kwargs)
         return data
 

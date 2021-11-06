@@ -8,7 +8,11 @@ from rising.transforms import AbstractTransform
 from rising.transforms.sitk import _ITKTransform
 from rising.utils import check_scalar
 
-__all__ = ["Compose", "DropoutCompose", "OneOf", ]
+__all__ = [
+    "Compose",
+    "DropoutCompose",
+    "OneOf",
+]
 
 
 def dict_call(batch: dict, transform: Callable) -> Any:
@@ -24,7 +28,8 @@ def dict_call(batch: dict, transform: Callable) -> Any:
     """
     if not isinstance(batch, Mapping):
         raise RuntimeError(
-            f"You may want to pass `default_transform_call` from rising.loading as `transform_call` to `Compose`")
+            "You may want to pass `default_transform_call` from rising.loading as `transform_call` to `Compose`"
+        )
     return transform(**batch)
 
 
@@ -176,93 +181,10 @@ class Compose(AbstractTransform):
             assert isinstance(trans, AbstractTransform)
             if not isinstance(trans, _ITKTransform):
                 tensor_transform_indicator.append(i)
-        transform_mapping = {k: v for k, v in zip(
-            tensor_transform_indicator, np.random.permutation(tensor_transform_indicator)
-        )}
+        transform_mapping = {
+            k: v for k, v in zip(tensor_transform_indicator, np.random.permutation(tensor_transform_indicator))
+        }
         self.transform_order = [transform_mapping.get(i, i) for i in self.transform_order]
-
-
-''' we delete this function.
-class SampleCompose(Compose):
-    """
-    Since every transformation takes dimension of `batch`, `feature_channel`, H, W, (D),
-    it is thus necessary to add `batch` dimension as a pseudo one when calling transformation inside the
-    dataset (before the collate function is called.)
-    In this `SampleCompose` module, we add manually a dimension insertion module and remove it afterwards.
-    """
-
-    def __init__(self, *transforms: Union[AbstractTransform, Sequence[AbstractTransform]], shuffle: bool = False,
-                 transform_call: Callable[[Any, Callable], Any] = dict_call, insert_dim: int):
-        self._insert_dim = insert_dim
-        super().__init__(*transforms, shuffle=shuffle, transform_call=transform_call)
-
-    @property
-    def transforms(self) -> torch.nn.ModuleList:
-        """
-        Transforms getter
-
-        Returns:
-            torch.nn.ModuleList: transforms to compose
-        """
-        return self._transforms
-
-    @transforms.setter
-    def transforms(self, transforms: Union[AbstractTransform, Sequence[AbstractTransform]]):
-        """
-        Transforms setter
-
-        Args:
-            transforms: one or multiple transformations which are applied in
-                consecutive order
-
-        """
-        # make transforms a list to be mutable.
-        # Otherwise the enforced typesetting below might fail.
-
-        if isinstance(transforms, tuple):
-            transforms = list(transforms)
-        if self._insert_dim is not None:
-            from rising.transforms.tensor import TensorInsertDim, TensorRemoveDim
-            keys = get_keys_from_transforms(transforms)
-            transforms.insert(0, TensorInsertDim(self._insert_dim, keys=keys))
-            transforms.append(TensorRemoveDim(self._insert_dim, keys=keys))
-
-        for idx, trafo in enumerate(transforms):
-            if not isinstance(trafo, torch.nn.Module):
-                transforms[idx] = _TransformWrapper(trafo)
-
-        self._transforms = torch.nn.ModuleList(transforms)
-        self.transform_order = list(range(len(self.transforms)))
-
-    def forward(self, *seq_like, **map_like) -> Union[Sequence, Mapping]:
-        """
-        Apply transforms in a consecutive order. Can either handle
-        Sequence like or Mapping like data.
-
-        Args:
-            *seq_like: data which is unpacked like a Sequence
-            **map_like: data which is unpacked like a dict
-
-        Returns:
-            Union[Sequence, Mapping]: transformed data
-        """
-        assert not (seq_like and map_like)
-        assert len(self.transforms) == len(self.transform_order)
-        data = seq_like if seq_like else map_like
-
-        if self.shuffle:
-            if self._insert_dim is not None:
-                new_transform_order = sample(self.transform_order[1:-1], len(self.transform_order[1:-1]))
-                new_transform_order.insert(0, self.transform_order[0])
-                new_transform_order.append(self.transform_order[-1])
-                self.transform_order = new_transform_order
-            else:
-                shuffle(self.transform_order)
-
-        for idx in self.transform_order:
-            data = self.transform_call(data, self.transforms[idx])
-        return data
-'''
 
 
 class DropoutCompose(Compose):
@@ -366,7 +288,7 @@ class OneOf(AbstractTransform):
             transforms = transforms[0]
         if not transforms:
             raise ValueError("At least one transformation needs to be selected.")
-        self.transforms = transforms
+        self.transforms = torch.nn.ModuleList(transforms)
 
         if weights is not None and len(weights) != len(transforms):
             raise ValueError(
@@ -386,3 +308,6 @@ class OneOf(AbstractTransform):
             index = torch.multinomial(self.weights, 1)
             data = self.transform_call(data, self.transforms[int(index)])
         return data
+
+    def extra_repr(self) -> str:
+        return ", ".join([str(x) for x in self.transforms])

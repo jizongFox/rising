@@ -1,5 +1,5 @@
 import math
-from typing import Callable, Sequence, Union
+from typing import Callable, Sequence
 
 import torch
 from torch.nn import functional as F
@@ -107,8 +107,8 @@ class KernelTransform(AbstractTransform):
         Returns:
             dict: dict with transformed data
         """
-        dtype = data[self.keys[0]].dtype
-        self.to(dtype)
+        # dtype, device = data[self.keys[0]].dtype, data[self.keys[0]].device
+        # self.to(dtype)
         for key, padding_mode in zip(self.keys, self.padding_mode):
             inp_pad = F.pad(data[key], self.padding, mode=padding_mode)
 

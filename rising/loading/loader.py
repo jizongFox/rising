@@ -12,7 +12,7 @@ from torch.utils.data._utils.collate import default_convert
 from torch.utils.data.dataloader import _MultiProcessingDataLoaderIter as __MultiProcessingDataLoaderIter
 from torch.utils.data.dataloader import _SingleProcessDataLoaderIter as __SingleProcessDataLoaderIter
 
-from rising.utils.transforms import get_keys_from_transforms
+from rising.utils.transforms import get_dtype_from_transforms, get_keys_from_transforms
 
 try:
     import numpy as np
@@ -199,8 +199,13 @@ class DataLoader(_DataLoader):
             keys = get_keys_from_transforms(gpu_transforms)
             to_gpu_trafo = ToDevice(device=device, non_blocking=pin_memory, keys=keys)
 
-            gpu_transforms = Compose(to_gpu_trafo, gpu_transforms)  # noqa
+            gpu_transforms = Compose(to_gpu_trafo, gpu_transforms)
             gpu_transforms = gpu_transforms.to(device)
+
+            # check the dtype from the gpu compose
+            dtype = get_dtype_from_transforms(gpu_transforms)
+            if dtype:
+                gpu_transforms = gpu_transforms.to(dtype)
 
         self.device = device
         self.sample_transforms = sample_transforms
@@ -445,7 +450,7 @@ class SampleTransformer(object):
         return sample
 
     def __len__(self) -> int:
-        return len(self.dataset)  # noqa
+        return len(self.dataset)
 
     def _change_pseudo_batch_dim(self, sample: Any, add: bool) -> Any:
         """
