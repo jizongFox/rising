@@ -76,9 +76,9 @@ class Affine(BaseTransform):
         self.matrix = matrix
         self.register_sampler("output_size", output_size)
         self.adjust_size = adjust_size
-        self.interpolation_mode = self._tuple_generator(interpolation_mode)
-        self.padding_mode = self._tuple_generator(padding_mode)
-        self.align_corners = self._tuple_generator(align_corners)
+        self.interpolation_mode = self.tuple_generator(interpolation_mode)
+        self.padding_mode = self.tuple_generator(padding_mode)
+        self.align_corners = self.tuple_generator(align_corners)
         self.reverse_order = reverse_order
         self.per_sample = per_sample
 

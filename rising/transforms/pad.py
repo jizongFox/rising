@@ -6,8 +6,16 @@ from rising.utils.mise import ntuple
 
 
 class Pad(BaseTransform):
-    def __init__(self, *, padding_size: item_or_seq[int], mode: str = "constant", pad_value: item_or_seq[float],
-                 keys: Sequence[str] = ("data",), grad: bool = False, **kwargs):
+    def __init__(
+        self,
+        *,
+        padding_size: item_or_seq[int],
+        mode: str = "constant",
+        pad_value: item_or_seq[float],
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
+        **kwargs
+    ):
         """
         padding_size should be the same for all the keys.
         pad_value can be different for different keys
@@ -15,7 +23,7 @@ class Pad(BaseTransform):
         super().__init__(_pad, keys=keys, grad=grad, property_names=(), **kwargs)
         self.padding_size = padding_size
         self.mode = mode
-        self.pad_value = self._tuple_generator(pad_value)
+        self.pad_value = self.tuple_generator(pad_value)
 
     def forward(self, **data) -> dict:
         """
@@ -37,8 +45,7 @@ class Pad(BaseTransform):
             cur_data = data[_key]
             input_shape = cur_data.shape[2:]
             pad_size = self.pad_parameters(input_shape, self.padding_size, ndim=cur_data.dim() - 2)
-            data[_key] = self.augment_fn(data[_key], pad_size=pad_size, grid_pad=False, mode=self.mode,
-                                         value=_value)
+            data[_key] = self.augment_fn(data[_key], pad_size=pad_size, grid_pad=False, mode=self.mode, value=_value)
         return data
 
     @staticmethod

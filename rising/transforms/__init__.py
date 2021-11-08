@@ -20,19 +20,25 @@ Implementations include:
 """
 
 from rising.transforms.abstract import (
-    AbstractTransform,
     BaseTransform,
-    BaseTransformSeeded,
-    PerChannelTransform,
-    PerSampleTransform,
+    BaseTransformMixin,
+    PerChannelTransformMixin,
+    PerSampleTransformMixin,
+    _AbstractTransform,
 )
 from rising.transforms.affine import Affine, BaseAffine, Resize, Rotate, Scale, StackedAffine, Translate
 from rising.transforms.channel import ArgMax, OneHot
 from rising.transforms.compose import Compose, DropoutCompose, OneOf
 from rising.transforms.crop import CenterCrop, RandomCrop
 from rising.transforms.format import FilterKeys, MapToSeq, PopKeys, RenameKeys, SeqToMap
-from rising.transforms.grid import GridTransform, StackedGridTransform, RandomCropGrid, CenterCropGrid, \
-    ElasticDistortion, RadialDistortion
+from rising.transforms.grid import (
+    CenterCropGrid,
+    ElasticDistortion,
+    GridTransform,
+    RadialDistortion,
+    RandomCropGrid,
+    StackedGridTransform,
+)
 from rising.transforms.intensity import (
     Clamp,
     ExponentialNoise,
@@ -42,19 +48,27 @@ from rising.transforms.intensity import (
     Noise,
     NormMeanStd,
     NormMinMax,
+    NormPercentile,
     NormRange,
     NormZeroMeanUnitStd,
     RandomAddValue,
     RandomBezierTransform,
     RandomScaleValue,
     RandomValuePerChannel,
-    NormPercentile
 )
 from rising.transforms.kernel import GaussianSmoothing, KernelTransform
 from rising.transforms.pad import Pad
 from rising.transforms.painting import LocalPixelShuffle, RandomInOrOutpainting, RandomInpainting, RandomOutpainting
-from rising.transforms.sitk import SITKWindows, SITKResample, SITK2Tensor
+from rising.transforms.sitk import SITK2Tensor, SITKResample, SITKWindows
 from rising.transforms.spatial import Mirror, ProgressiveResize, ResizeNative, Rot90, SizeStepScheduler, Zoom
-from rising.transforms.tensor import Permute, TensorOp, ToDevice, ToDeviceDtype, ToDtype, ToTensor, TensorInsertDim, \
-    TensorRemoveDim
+from rising.transforms.tensor import (
+    Permute,
+    TensorInsertDim,
+    TensorOp,
+    TensorRemoveDim,
+    ToDevice,
+    ToDeviceDtype,
+    ToDtype,
+    ToTensor,
+)
 from rising.transforms.utility import BoxToSeg, DoNothing, InstanceToSemantic, SegToBox

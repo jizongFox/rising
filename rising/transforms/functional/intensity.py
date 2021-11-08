@@ -44,7 +44,7 @@ def norm_range(
     Scale range of tensor
 
     Args:
-        data: input data. Per channel option supports [C,H,W] and [C,H,W,D].
+        data: input data. Per channel option supports [B,C,H,W] and [B,C,H,W,D].
         min: minimal value
         max: maximal value
         per_channel: range is normalized per channel
@@ -53,6 +53,7 @@ def norm_range(
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
     if out is None:
         out = torch.zeros_like(data)
 
@@ -69,7 +70,7 @@ def norm_min_max(
     Scale range to [0,1]
 
     Args:
-        data: input data. Per channel option supports [C,H,W] and [C,H,W,D].
+        data: input data without batch dimension. Per channel option supports [B,C,H,W] and [B,C,H,W,D].
         per_channel: range is normalized per channel
         out:  if provided, result is saved in here
         eps: small constant for numerical stability.
@@ -78,6 +79,7 @@ def norm_min_max(
     Returns:
         torch.Tensor: scaled data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
 
     def _norm(_data: torch.Tensor, _out: torch.Tensor):
         _min = _data.min()
@@ -91,8 +93,8 @@ def norm_min_max(
         out = torch.zeros_like(data)
 
     if per_channel:
-        for _c in range(data.shape[0]):
-            out[_c] = _norm(data[_c], out[_c])
+        for _c in range(data.shape[1]):
+            out[:, _c] = _norm(data[:, _c], out[:, _c])
     else:
         out = _norm(data, out)
     return out
@@ -100,8 +102,8 @@ def norm_min_max(
 
 def norm_min_max_percentile(
     data: torch.Tensor,
-    low_percentile: float,
-    high_percentile: float,
+    min: float,
+    max: float,
     per_channel: bool = True,
     out: Optional[torch.Tensor] = None,
     eps=1e-8,
@@ -109,26 +111,28 @@ def norm_min_max_percentile(
     """
     Normalize data based on min and max percentile between 0 - 100.
     Args:
-        data: input data, under form of [C,H,W] and [C,H,W,D].
-        low_percentile: low percentile to clamp,  between 0 and 100
-        high_percentile: high percentile to clam, between 0 and 100
+        data: input data, under form of [B,C,H,W] and [B,C,H,W,D].
+        min: low percentile to clamp,  between 0 and 100
+        max: high percentile to clam, between 0 and 100
         per_channel: if compute the percentile on channel
         out:
         eps: small eps to prevent division by 0.l
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
+
     if out is None:
         out = torch.empty_like(data)
 
     if per_channel:
         for i, data_ in enumerate(data):
-            min_ = torch.quantile(data_.float(), float(low_percentile))
-            max_ = torch.quantile(data_.float(), float(high_percentile))
+            min_ = torch.quantile(data_.float(), float(min))
+            max_ = torch.quantile(data_.float(), float(max))
             out[i] = clamp(data_, min=float(min_), max=float(max_), out=out[i])
     else:
-        max_ = torch.quantile(data, float(low_percentile))
-        min_ = torch.quantile(data, float(high_percentile))
+        max_ = torch.quantile(data, float(min))
+        min_ = torch.quantile(data, float(max))
         out = clamp(data, min=float(min_), max=float(max_), out=out)
 
     return norm_min_max(out, per_channel=per_channel, out=out, eps=eps)
@@ -150,6 +154,7 @@ def norm_zero_mean_unit_std(
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
 
     def _norm(_data: torch.Tensor, _out: torch.Tensor):
         denom = _data.std()
@@ -189,6 +194,8 @@ def norm_mean_std(
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
+
     if out is None:
         out = torch.zeros_like(data)
 

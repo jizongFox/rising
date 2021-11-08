@@ -4,7 +4,7 @@ import torch
 
 from rising.random.abstract import AbstractParameter
 from rising.transforms.abstract import BaseTransform, item_or_seq
-from rising.transforms.functional.sitk import itk_resample, itk_clip, itk2tensor
+from rising.transforms.functional.sitk import itk2tensor, itk_clip, itk_resample
 
 SpacingParamType = Union[
     int, Sequence[int], float, Sequence[float], torch.Tensor, AbstractParameter, Sequence[AbstractParameter]
@@ -18,16 +18,24 @@ class _ITKTransform:
     """
     this mixin indicates if the transform is Tensor-based, use to not shuffle in Compose.
     """
+
     pass
 
 
 class SITKResample(_ITKTransform, BaseTransform):
     """
-        simpleitk resampling class
+    simpleitk resampling class
     """
 
-    def __init__(self, spacing: SpacingParamType, *, pad_value: Union[int, float], keys: Sequence = ("data",),
-                 interpolation: item_or_seq[str] = "nearest", **kwargs):
+    def __init__(
+        self,
+        spacing: SpacingParamType,
+        *,
+        pad_value: Union[int, float],
+        keys: Sequence = ("data",),
+        interpolation: item_or_seq[str] = "nearest",
+        **kwargs
+    ):
         """
         resample simpleitk image given new spacing and padding value
         Args:
@@ -35,9 +43,16 @@ class SITKResample(_ITKTransform, BaseTransform):
             pad_value: padding values
             interpolation: str or sequence of str to indicate the interpolation for different keys.
         """
-        super().__init__(augment_fn=itk_resample, keys=keys, grad=False, spacing=spacing, pad_value=pad_value,
-                         property_names=("spacing", "pad_value"), **kwargs)
-        self.interpolation_mode = self._tuple_generator(interpolation)
+        super().__init__(
+            augment_fn=itk_resample,
+            keys=keys,
+            grad=False,
+            property_names=("spacing", "pad_value"),
+            spacing=spacing,
+            pad_value=pad_value,
+            **kwargs,
+        )
+        self.interpolation_mode = self.tuple_generator(interpolation)
 
     def forward(self, **data) -> dict:
         for key, interpolation in zip(self.keys, self.interpolation_mode):
@@ -77,10 +92,15 @@ class SITKWindows(_ITKTransform, BaseTransform):
 
 
 class SITK2Tensor(_ITKTransform, BaseTransform):
-
-    def __init__(self, *, keys: Sequence = ("data",), dtype: item_or_seq[torch.dtype] = torch.float,
-                 insert_dim: int = None,
-                 grad: bool = False, **kwargs):
+    def __init__(
+        self,
+        *,
+        keys: Sequence = ("data",),
+        dtype: item_or_seq[torch.dtype] = torch.float,
+        insert_dim: int = None,
+        grad: bool = False,
+        **kwargs
+    ):
         """
         Convert sitk image to Tensor
         Args:
@@ -88,15 +108,12 @@ class SITK2Tensor(_ITKTransform, BaseTransform):
             insert_dim: type: int, if you need to expand the tensor given specific dimension, default None,
         """
         super().__init__(itk2tensor, keys=keys, grad=grad, **kwargs)
-        self.dtype = self._tuple_generator(dtype)
+        self.dtype = self.tuple_generator(dtype)
         self.insert_dim = insert_dim
 
     def forward(self, **data) -> dict:
         for key, dtype in zip(self.keys, self.dtype):
-            data[key] = self.augment_fn(
-                data[key],
-                dtype=dtype
-            )
+            data[key] = self.augment_fn(data[key], dtype=dtype)
             if self.insert_dim is not None:
                 data[key] = data[key].unsqueeze(self.insert_dim)
         return data

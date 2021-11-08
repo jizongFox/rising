@@ -7,12 +7,12 @@ from torch.nn import functional as F
 from rising.utils import check_scalar
 from rising.utils.mise import ntuple
 
-from .abstract import AbstractTransform, item_or_seq
+from .abstract import _AbstractTransform, item_or_seq
 
 __all__ = ["KernelTransform", "GaussianSmoothing"]
 
 
-class KernelTransform(AbstractTransform):
+class KernelTransform(_AbstractTransform):
     """
     Baseclass for kernel based transformations (kernel is applied to
     each channel individually)

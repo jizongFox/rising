@@ -1,16 +1,15 @@
 from typing import Sequence, Union
 
 from rising.random import AbstractParameter
-from rising.transforms.abstract import BaseTransform, BaseTransformSeeded
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSampleTransformMixin
 from rising.transforms.functional.crop import center_crop, random_crop
 
 __all__ = ["CenterCrop", "RandomCrop"]
 
 
-class CenterCrop(BaseTransform):
+class CenterCrop(BaseTransformMixin, BaseTransform):
     def __init__(
-        self, size: Union[int, Sequence, AbstractParameter], keys: Sequence = ("data",), grad: bool = False,
-        **kwargs
+        self, size: Union[int, Sequence, AbstractParameter], keys: Sequence = ("data",), grad: bool = False, **kwargs
     ):
         """
         Args:
@@ -22,7 +21,7 @@ class CenterCrop(BaseTransform):
         super().__init__(augment_fn=center_crop, keys=keys, grad=grad, property_names=("size",), size=size, **kwargs)
 
 
-class RandomCrop(BaseTransformSeeded):
+class RandomCrop(PerSampleTransformMixin, BaseTransform):
     """
     todo: to enhance this function with padding function.
     """
@@ -46,9 +45,10 @@ class RandomCrop(BaseTransformSeeded):
         super().__init__(
             augment_fn=random_crop,
             keys=keys,
-            size=size,
-            dist=dist,
             grad=grad,
             property_names=("size", "dist"),
+            size=size,
+            dist=dist,
+            seeded=True,
             **kwargs
         )

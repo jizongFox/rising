@@ -1,13 +1,21 @@
 from typing import Dict, Optional, Sequence, Union
 
 import torch
-from torch.utils.data._utils.collate import default_convert  # noqa
+from torch.utils.data._utils.collate import default_convert
 
 from rising.transforms import BaseTransform
 from rising.transforms.functional import tensor_op, to_device_dtype
 
-__all__ = ["ToTensor", "ToDeviceDtype", "ToDevice", "ToDtype", "TensorOp", "Permute", "TensorInsertDim",
-           "TensorRemoveDim"]
+__all__ = [
+    "ToTensor",
+    "ToDeviceDtype",
+    "ToDevice",
+    "ToDtype",
+    "TensorOp",
+    "Permute",
+    "TensorInsertDim",
+    "TensorRemoveDim",
+]
 
 
 class ToTensor(BaseTransform):
@@ -34,7 +42,7 @@ class ToDeviceDtype(BaseTransform):
         copy: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -56,7 +64,7 @@ class ToDeviceDtype(BaseTransform):
             dtype=dtype,
             non_blocking=non_blocking,
             copy=copy,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -70,7 +78,7 @@ class ToDevice(ToDeviceDtype):
         copy: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -172,7 +180,7 @@ class TensorRemoveDim(BaseTransform):
         for key in self.keys:
             prev_dim = data[key].dim()
             data[key] = data[key].squeeze(self.dim)
-            assert data[key].dim() == prev_dim - 1, \
-                (f"{self.__class__.__name__} cannot remove dimension {self.dim}, "
-                 f"given shape {data[key].shape}.")
+            assert data[key].dim() == prev_dim - 1, (
+                f"{self.__class__.__name__} cannot remove dimension {self.dim}, " f"given shape {data[key].shape}."
+            )
         return data

@@ -2,7 +2,7 @@ from typing import Sequence
 
 import torch
 
-from rising.transforms.abstract import AbstractTransform, BaseTransform
+from rising.transforms.abstract import BaseTransform, _AbstractTransform
 from rising.transforms.functional.painting import local_pixel_shuffle, random_inpainting, random_outpainting
 
 __all__ = ["RandomInpainting", "RandomOutpainting", "RandomInOrOutpainting", "LocalPixelShuffle"]
@@ -20,7 +20,7 @@ class LocalPixelShuffle(BaseTransform):
             grad: enable gradient computation inside transformation
             **kwargs: keyword arguments passed to augment_fn
         """
-        super().__init__(augment_fn=local_pixel_shuffle, n=n, keys=keys, grad=grad, **kwargs)
+        super().__init__(augment_fn=local_pixel_shuffle, keys=keys, grad=grad, n=n, **kwargs)
 
 
 class RandomInpainting(BaseTransform):
@@ -38,10 +38,10 @@ class RandomInpainting(BaseTransform):
             grad: enable gradient computation inside transformation
             **kwargs: keyword arguments passed to augment_fn
         """
-        super().__init__(augment_fn=random_inpainting, n=n, maxv=maxv, minv=minv, keys=keys, grad=grad, **kwargs)
+        super().__init__(augment_fn=random_inpainting, keys=keys, grad=grad, n=n, maxv=maxv, minv=minv, **kwargs)
 
 
-class RandomOutpainting(AbstractTransform):
+class RandomOutpainting(_AbstractTransform):
     """The border of the images will be replaced by uniform noise,
     as proposed in Models Genesis"""
 
@@ -75,7 +75,7 @@ class RandomOutpainting(AbstractTransform):
         return data
 
 
-class RandomInOrOutpainting(AbstractTransform):
+class RandomInOrOutpainting(_AbstractTransform):
     """Applies either random inpainting or random outpainting to the image,
     as proposed in Models Genesis"""
 

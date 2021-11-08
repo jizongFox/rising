@@ -1,11 +1,19 @@
 import collections
+import functools
+import random
 import typing as t
+from contextlib import contextmanager, nullcontext
 from itertools import repeat
 
 import numpy as np
+import torch
 from torch import Tensor
 
 T = t.TypeVar("T")
+
+__all__ = ["ntuple", "single", "pair", "triple", "quadruple", "fix_seed_cxm", "nullcxm"]
+
+nullcxm = nullcontext
 
 
 def ntuple(n: int) -> t.Callable[[t.Union[T, t.Sequence[T]]], t.Sequence[T]]:
@@ -30,3 +38,76 @@ single = ntuple(1)
 pair = ntuple(2)
 triple = ntuple(3)
 quadruple = ntuple(4)
+
+
+class fixed_torch_seed:
+    """
+    fixed random seed for torch module
+    """
+
+    def __init__(self, seed: int = 10, cuda: bool = True) -> None:
+        super().__init__()
+        self.seed = seed
+        self.cuda_flag = cuda and torch.cuda.is_available()
+
+    def __enter__(self):
+        seed = self.seed
+        self.__pre_state = torch.get_rng_state()
+        self.__pre_cuda_state_all = None
+        if self.cuda_flag:
+            self.__pre_cuda_state_all = torch.cuda.get_rng_state_all()
+
+        torch.manual_seed(seed)
+        if self.cuda_flag:
+            torch.cuda.manual_seed_all(seed)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        torch.set_rng_state(self.__pre_state)
+        if self.cuda_flag:
+            torch.cuda.set_rng_state_all(self.__pre_cuda_state_all)
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def generator_context(*args, **kwargs):
+            with self:
+                gen = func(*args, **kwargs)
+            return gen
+
+        return generator_context
+
+
+class fixed_random_seed:
+    """
+    fixed random seed for random module
+    """
+
+    def __init__(self, seed: int = 10, **kwargs) -> None:
+        super().__init__()
+        self.seed = seed
+
+    def __enter__(self):
+        seed = self.seed
+        self.__pre_state = random.getstate()
+        random.seed(seed)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        random.setstate(self.__pre_state)
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def generator_context(*args, **kwargs):
+            with self:
+                gen = func(*args, **kwargs)
+            return gen
+
+        return generator_context
+
+
+@contextmanager
+def fix_seed_cxm(seed: int = 10, cuda: bool = True):
+    with fixed_torch_seed(seed=seed, cuda=cuda):
+        with fixed_random_seed(seed=seed):
+            try:
+                yield
+            finally:
+                pass
