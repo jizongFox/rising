@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Sequence, Union
 
 import torch
@@ -120,20 +121,27 @@ def norm_min_max_percentile(
     Returns:
         torch.Tensor: normalized data
     """
-    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
 
     if out is None:
         out = torch.empty_like(data)
 
     if per_channel:
-        for i, data_ in enumerate(data):
+        for i, data_ in enumerate(data.shape[1]):
             min_ = torch.quantile(data_.float(), float(min))
             max_ = torch.quantile(data_.float(), float(max))
-            out[i] = clamp(data_, min=float(min_), max=float(max_), out=out[i])
+            out[:, i] = clamp(
+                data_,
+                min=float(min_),
+                max=float(max_),
+            )
     else:
-        max_ = torch.quantile(data, float(min))
-        min_ = torch.quantile(data, float(max))
-        out = clamp(data, min=float(min_), max=float(max_), out=out)
+        min_ = torch.quantile(data, float(min))
+        max_ = torch.quantile(data, float(max))
+        out = clamp(
+            data,
+            min=float(min_),
+            max=float(max_),
+        )
 
     return norm_min_max(out, per_channel=per_channel, out=out, eps=eps)
 
@@ -248,6 +256,10 @@ def gamma_correction(data: torch.Tensor, gamma: float) -> torch.Tensor:
     Returns:
         torch.Tensor: gamma corrected data
     """
+    min_, max_ = data.min().detach(), data.max().detach()
+    if min_ < 0 or max_ > 1:
+        warnings.warn("`data` range not in [0, 1]", RuntimeWarning)
+
     if torch.is_tensor(gamma):
         gamma = gamma.to(data)
     return data.pow(gamma)
@@ -290,12 +302,13 @@ def scale_by_value(data: torch.Tensor, value: float, out: Optional[torch.Tensor]
 def bezier_3rd_order(
     data: torch.Tensor, maxv: float = 1.0, minv: float = 0.0, out: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
-    p0 = torch.zeros((1, 2))
-    p1 = torch.rand((1, 2))
-    p2 = torch.rand((1, 2))
-    p3 = torch.ones((1, 2))
+    device, dtype = data.device, data.dtype
+    p0 = torch.zeros((1, 2), device=device, dtype=dtype)
+    p1 = torch.rand((1, 2), device=device, dtype=dtype)
+    p2 = torch.rand((1, 2), device=device, dtype=dtype)
+    p3 = torch.ones((1, 2), device=device, dtype=dtype)
 
-    t = torch.linspace(0.0, 1.0, 1000).unsqueeze(1)
+    t = torch.linspace(0.0, 1.0, 1000, device=device, dtype=dtype).unsqueeze(1)
 
     points = (1 - t * t * t) * p0 + 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t * p3
 

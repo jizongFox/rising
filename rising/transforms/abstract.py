@@ -183,22 +183,22 @@ class BaseTransform(_AbstractTransform, ABC):
                 during forward pass
             **kwargs: keyword arguments passed to augment_fn
         """
-        sampler_vals = {k: v for k, v in kwargs.items() if self.need_sampler(v)}
-        # kwargs = {k: v for k, v in kwargs.items() if k not in sampler_vals}
         super().__init__(grad=grad, **kwargs)
+        sampler_vals = {k: v for k, v in kwargs.items() if self.need_sampler(v)}
+
         self._paired_kw_names: List[str] = []
         self._augment_fn_names = augment_fn_names  # kwargs passed to the augment_fn
+        self.paired_kw_names = paired_kw_names
 
         self.augment_fn = augment_fn
+
         assert isinstance(keys, Sequence), keys
         self.keys = keys
-
-        self.per_sample = per_sample
-        self.kwargs = kwargs
-
         self.tuple_generator = ntuple(len(self.keys))
 
-        for kwarg_name in paired_kw_names:
+        self.per_sample = per_sample
+
+        for kwarg_name in self.paired_kw_names:
             self.register_paired_attribute(kwarg_name, getattr(self, kwarg_name))
 
         for name, val in sampler_vals.items():
