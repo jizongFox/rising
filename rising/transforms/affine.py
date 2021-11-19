@@ -525,6 +525,8 @@ class Rotate(BaseAffine):
         padding_mode: item_or_seq[str] = "zeros",
         align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
+        per_sample: bool = True,
+        p: float = 1,
         **kwargs,
     ):
         """
@@ -578,6 +580,8 @@ class Rotate(BaseAffine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
+            per_sample=per_sample,
+            p=p,
             **kwargs,
         )
 
@@ -602,6 +606,8 @@ class Translate(BaseAffine):
         align_corners: item_or_seq[bool] = False,
         unit: str = "pixel",
         reverse_order: bool = False,
+        per_sample: bool = True,
+        p: float = 1,
         **kwargs,
     ):
         """
@@ -655,6 +661,8 @@ class Translate(BaseAffine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
+            per_sample=per_sample,
+            p=p,
             **kwargs,
         )
         self.unit = unit
@@ -696,6 +704,8 @@ class Scale(BaseAffine):
         padding_mode: item_or_seq[str] = "zeros",
         align_corners: item_or_seq[bool] = False,
         reverse_order: bool = False,
+        per_sample: bool = True,
+        p: float = 1,
         **kwargs,
     ):
         """
@@ -755,6 +765,8 @@ class Scale(BaseAffine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
+            per_sample=per_sample,
+            p=p,
             **kwargs,
         )
 
