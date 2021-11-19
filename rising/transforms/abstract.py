@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
 
 import torch
@@ -51,6 +51,8 @@ class _AbstractTransform(torch.nn.Module):
             **kwargs : additional keyword arguments (will be forwarded to
                 sampler call)
         """
+        if name in self._registered_samplers:
+            raise ValueError(f"{name} has been registered as sampler.")
         self._registered_samplers.append(name)
 
         if not isinstance(sampler, (tuple, list)):
@@ -234,6 +236,7 @@ class BaseTransform(_AbstractTransform, ABC):
         index = self.keys.index(key)
         return {k: getattr(self, k)[index] for k in self._paired_kw_names}
 
+    @abstractmethod
     def forward(self, **data) -> dict:
         """
         implementation override by mixin
@@ -270,6 +273,7 @@ class BaseTransformMixin(_BaseMixin):
         """
         super().__init__(**kwargs)
         self.seeded = seeded
+        assert 0 <= p <= 1, p
         self.p = p
 
     def forward(self, **data) -> Dict[str, Any]:

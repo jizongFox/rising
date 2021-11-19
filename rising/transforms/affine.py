@@ -2,7 +2,7 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
-from rising.transforms.abstract import BaseTransform, item_or_seq
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, item_or_seq
 from rising.transforms.functional.affine import AffineParamType, affine_image_transform, parametrize_matrix
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 from rising.utils.checktype import check_scalar
@@ -72,7 +72,15 @@ class Affine(BaseTransform):
             **kwargs: additional keyword arguments passed to the
                 affine transform
         """
-        super().__init__(augment_fn=affine_image_transform, keys=keys, grad=grad, **kwargs)
+        super().__init__(
+            augment_fn=affine_image_transform,
+            keys=keys,
+            per_sample=per_sample,
+            augment_fn_names=(),
+            grad=grad,
+            seeded=True,
+            **kwargs,
+        )
         self.matrix = matrix
         self.register_sampler("output_size", output_size)
         self.adjust_size = adjust_size
@@ -80,7 +88,6 @@ class Affine(BaseTransform):
         self.padding_mode = self.tuple_generator(padding_mode)
         self.align_corners = self.tuple_generator(align_corners)
         self.reverse_order = reverse_order
-        self.per_sample = per_sample
 
     def assemble_matrix(self, **data) -> torch.Tensor:
         """
@@ -142,7 +149,6 @@ class Affine(BaseTransform):
                 padding_mode=padding,  # this can be different
                 align_corners=align_corners,  # this can be different
                 reverse_order=self.reverse_order,
-                **self.kwargs,
             )
 
         return data
@@ -317,7 +323,10 @@ class StackedAffine(Affine):
         return matrix_to_cartesian(whole_trafo)
 
 
-class BaseAffine(Affine):
+class BaseAffine(
+    Affine,
+    BaseTransformMixin,
+):
     """
     Class performing a basic Affine Transformation on a given sample dict.
     The transformation will be applied to all the dict-entries specified
@@ -339,6 +348,7 @@ class BaseAffine(Affine):
         align_corners: item_or_seq[Optional[bool]] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
+        p: float = 1,
         **kwargs,
     ):
         """
@@ -399,6 +409,7 @@ class BaseAffine(Affine):
                 batch order [(D,)H,W]
             per_sample: sample different values for each element in the batch.
                 The transform is still applied in a batched wise fashion.
+            p: float, the probability of applying the transformation on batches.
             **kwargs: additional keyword arguments passed to the
                 affine transform
         """
@@ -412,6 +423,7 @@ class BaseAffine(Affine):
             align_corners=align_corners,
             reverse_order=reverse_order,
             per_sample=per_sample,
+            p=p,
             **kwargs,
         )
         self.register_sampler("scale", scale)
@@ -437,11 +449,16 @@ class BaseAffine(Affine):
         ndim = len(data[self.keys[0]].shape) - 2  # channel and batch dim
         device = data[self.keys[0]].device
         dtype = data[self.keys[0]].dtype
+        seed = int(torch.randint(0, int(1e6), (1,)))
+
+        scale = self.sample_for_batch_with_prob("scale", batchsize, default_value=1.0, seed=seed)
+        rotation = self.sample_for_batch_with_prob("rotation", batchsize, default_value=0.0, seed=seed)
+        translation = self.sample_for_batch_with_prob("translation", batchsize, default_value=0.0, seed=seed)
 
         self.matrix = parametrize_matrix(
-            scale=self.sample_for_batch("scale", batchsize),
-            rotation=self.sample_for_batch("rotation", batchsize),
-            translation=self.sample_for_batch("translation", batchsize),
+            scale=scale,
+            rotation=rotation,
+            translation=translation,
             batchsize=batchsize,
             ndim=ndim,
             degree=self.degree,
@@ -467,6 +484,24 @@ class BaseAffine(Affine):
             return [elem] + [getattr(self, name) for _ in range(batchsize - 1)]
         else:
             return elem  # either a single scalar value or None
+
+    def sample_for_batch_with_prob(self, name: str, batchsize: int, *, default_value: float, seed: int):
+        batch_element = self.sample_for_batch(name, batchsize)
+        if batch_element is None:
+            return batch_element
+        with self.random_cxm(seed=int(seed)):
+            if not self.per_sample:
+                assert not isinstance(batch_element, (list, tuple))
+                batch_element = batch_element if torch.rand(1) < self.p else default_value
+                return batch_element
+            elem_length = len(batch_element[0])
+            if elem_length == 1:
+                return [v if torch.rand(1) < self.p else torch.as_tensor(default_value) for v in batch_element]
+            else:
+                return [
+                    v if torch.rand(1) < self.p else tuple(torch.as_tensor(default_value) for _ in range(elem_length))
+                    for v in batch_element
+                ]
 
 
 class Rotate(BaseAffine):
