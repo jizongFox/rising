@@ -3,7 +3,7 @@ from typing import Sequence, Tuple, Union
 import torch
 
 from rising.random.abstract import AbstractParameter
-from rising.transforms.abstract import BaseTransform, item_or_seq
+from rising.transforms.abstract import BaseTransform, ITEM_or_SEQ
 from rising.transforms.functional.sitk import itk2tensor, itk_clip, itk_resample
 
 SpacingParamType = Union[
@@ -33,8 +33,7 @@ class SITKResample(_ITKTransform, BaseTransform):
         *,
         pad_value: Union[int, float],
         keys: Sequence = ("data",),
-        interpolation: item_or_seq[str] = "nearest",
-        **kwargs
+        interpolation: ITEM_or_SEQ[str] = "nearest",
     ):
         """
         resample simpleitk image given new spacing and padding value
@@ -47,10 +46,8 @@ class SITKResample(_ITKTransform, BaseTransform):
             augment_fn=itk_resample,
             keys=keys,
             grad=False,
-            property_names=("spacing", "pad_value"),
             spacing=spacing,
             pad_value=pad_value,
-            **kwargs,
         )
         self.interpolation_mode = self.tuple_generator(interpolation)
 
@@ -96,10 +93,10 @@ class SITK2Tensor(_ITKTransform, BaseTransform):
         self,
         *,
         keys: Sequence = ("data",),
-        dtype: item_or_seq[torch.dtype] = torch.float,
+        dtype: ITEM_or_SEQ[torch.dtype] = torch.float,
         insert_dim: int = None,
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Convert sitk image to Tensor

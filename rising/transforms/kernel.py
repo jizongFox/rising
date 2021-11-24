@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from rising.utils import check_scalar
 from rising.utils.mise import ntuple
 
-from .abstract import _AbstractTransform, item_or_seq
+from .abstract import ITEM_or_SEQ, _AbstractTransform
 
 __all__ = ["KernelTransform", "GaussianSmoothing"]
 
@@ -21,10 +21,10 @@ class KernelTransform(_AbstractTransform):
     def __init__(
         self,
         in_channels: int,
-        kernel_size: item_or_seq[int],
+        kernel_size: ITEM_or_SEQ[int],
         dim: int = 2,
-        stride: item_or_seq[int] = 1,
-        padding: item_or_seq[int] = 0,
+        stride: ITEM_or_SEQ[int] = 1,
+        padding: ITEM_or_SEQ[int] = 0,
         padding_mode: str = "zero",
         keys: Sequence[str] = ("data",),
         grad: bool = False,
@@ -129,12 +129,12 @@ class GaussianSmoothing(KernelTransform):
     def __init__(
         self,
         in_channels: int,
-        kernel_size: item_or_seq[int],
-        std: item_or_seq[float],
+        kernel_size: ITEM_or_SEQ[int],
+        std: ITEM_or_SEQ[float],
         dim: int = 2,
-        stride: item_or_seq[int] = 1,
-        padding: item_or_seq[int] = 0,
-        padding_mode: item_or_seq[str] = "constant",
+        stride: ITEM_or_SEQ[int] = 1,
+        padding: ITEM_or_SEQ[int] = 0,
+        padding_mode: ITEM_or_SEQ[str] = "constant",
         keys: Sequence[str] = ("data",),
         grad: bool = False,
         **kwargs

@@ -9,7 +9,7 @@ from rising.utils.mise import fix_seed_cxm, ntuple, nullcxm
 
 __all__ = [
     "_AbstractTransform",
-    "item_or_seq",
+    "ITEM_or_SEQ",
     "BaseTransform",
     "PerChannelTransformMixin",
     "PerSampleTransformMixin",
@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 T = TypeVar("T")
-item_or_seq = Union[T, Sequence[T]]
+ITEM_or_SEQ = Union[T, Sequence[T]]
 
 augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
@@ -26,7 +26,7 @@ augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 class _AbstractTransform(nn.Module):
     """Base class for all transforms"""
 
-    def __init__(self, grad: bool = False, **kwargs):
+    def __init__(self, *, grad: bool = False, **kwargs):
         """
         Args:
             grad: enable gradient computation inside transformation
@@ -90,6 +90,7 @@ class _AbstractTransform(nn.Module):
         else:
             return False
 
+    @final
     def __getattribute__(self, item) -> Any:
         """
         Automatically dereference registered samplers
@@ -226,7 +227,7 @@ class BaseTransform(_AbstractTransform, ABC):
         else:
             return elem  # either a single scalar value or None
 
-    def register_paired_attribute(self, name: str, value: item_or_seq[T]):
+    def register_paired_attribute(self, name: str, value: ITEM_or_SEQ[T]):
         if name in self._paired_kw_names:
             raise ValueError(f"{name} has been registered in self._pair_kwarg_names")
         if name not in self._augment_fn_names:
@@ -336,20 +337,20 @@ class PerSampleTransformMixin(BaseTransformMixin):
 
         seed = int(torch.randint(0, int(1e16), (1,)))
 
-        for _key in self.keys:
-            batch_size = data[_key].shape[0]
+        for key in self.keys:
+            batch_size = data[key].shape[0]
             out = []
             for b in range(batch_size):
                 with self.random_cxm(seed + b):
                     kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                    kwargs.update(self.get_pair_kwargs(_key))
+                    kwargs.update(self.get_pair_kwargs(key))
 
                     if torch.rand(1).item() < self.p:
-                        out.append(self.augment_fn(data[_key][b][None, ...], **kwargs))
+                        out.append(self.augment_fn(data[key][b][None, ...], **kwargs))
                     else:
-                        out.append(data[_key][b][None, ...])
+                        out.append(data[key][b][None, ...])
 
-            data[_key] = torch.cat(out, dim=0)
+            data[key] = torch.cat(out, dim=0)
         return data
 
 
@@ -390,14 +391,15 @@ class PerChannelTransformMixin(BaseTransformMixin):
 
         seed = int(torch.randint(0, int(1e16), (1,)))
 
-        for _key in self.keys:
+        for key in self.keys:
             out = []
-            channel_dim = data[_key].shape[1]
+            channel_dim = data[key].shape[1]
             for c in range(channel_dim):
                 with self.random_cxm(seed + c):
                     kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                    kwargs.update(self.get_pair_kwargs(_key))
-                    out.append(self.augment_fn(data[_key][:, c].unsqueeze(1), **kwargs))
-            data[_key] = torch.cat(out, dim=1)
+                    kwargs.update(self.get_pair_kwargs(key))
+
+                    out.append(self.augment_fn(data[key][:, c].unsqueeze(1), **kwargs))
+            data[key] = torch.cat(out, dim=1)
 
         return data

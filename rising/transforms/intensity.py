@@ -4,6 +4,7 @@ from rising.random import AbstractParameter
 from rising.transforms.abstract import (
     BaseTransform,
     BaseTransformMixin,
+    ITEM_or_SEQ,
     PerChannelTransformMixin,
     PerSampleTransformMixin,
     augment_callable,
@@ -47,21 +48,17 @@ class Clamp(BaseTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        min: Union[float, AbstractParameter],
-        max: Union[float, AbstractParameter],
+        min: ITEM_or_SEQ[Union[float, AbstractParameter]],
+        max: ITEM_or_SEQ[Union[float, AbstractParameter]],
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
     ):
         """
-
-
         Args:
             min: minimal value
             max: maximal value
             keys: the keys corresponding to the values to clamp
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to augment_fn
         """
         super().__init__(
             augment_fn=clamp,
@@ -71,20 +68,18 @@ class Clamp(BaseTransformMixin, BaseTransform):
             augment_fn_names=("min", "max"),
             min=min,
             max=max,
-            **kwargs
         )
 
 
 class NormRange(PerSampleTransformMixin, BaseTransform):
     def __init__(
         self,
-        min: Union[float, AbstractParameter],
-        max: Union[float, AbstractParameter],
+        min: ITEM_or_SEQ[Union[float, AbstractParameter]],
+        max: ITEM_or_SEQ[Union[float, AbstractParameter]],
         keys: Sequence = ("data",),
         per_channel: bool = True,
-        grad: bool = False,
         per_sample=True,
-        **kwargs
+        grad: bool = False,
     ):
         """
         Args:
@@ -93,7 +88,6 @@ class NormRange(PerSampleTransformMixin, BaseTransform):
             keys: keys to normalize
             per_channel: normalize per channel
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to normalization function
         """
         super().__init__(
             augment_fn=norm_range,
@@ -105,7 +99,6 @@ class NormRange(PerSampleTransformMixin, BaseTransform):
             max=max,
             per_sample=per_sample,
             per_channel=per_channel,
-            **kwargs
         )
 
 
@@ -114,14 +107,20 @@ class NormPercentile(PerSampleTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        min: Union[float, AbstractParameter],
-        max: Union[float, AbstractParameter],
-        per_channel: bool = True,
+        min: ITEM_or_SEQ[Union[float, AbstractParameter]],
+        max: ITEM_or_SEQ[Union[float, AbstractParameter]],
         keys: Sequence[str] = ("data",),
         grad: bool = False,
+        per_channel: bool = True,
         per_sample=True,
-        **kwargs
     ):
+        """
+        Args:
+            min: min percentile, between 0 and 1
+            max: max percentile, between 0 and 1
+            per_channel: if normalize per channel
+            per_sample: if normalize per sample or per batch
+        """
         super().__init__(
             augment_fn=norm_min_max_percentile,
             keys=keys,
@@ -132,7 +131,6 @@ class NormPercentile(PerSampleTransformMixin, BaseTransform):
             paired_kw_names=("min", "max"),
             augment_fn_names=("min", "max", "per_channel"),
             per_sample=per_sample,
-            **kwargs
         )
 
 
@@ -143,32 +141,30 @@ class NormMinMax(PerSampleTransformMixin, BaseTransform):
         self,
         keys: Sequence = ("data",),
         per_channel: bool = True,
+        per_sample=True,
         grad: bool = False,
         eps: Optional[float] = 1e-8,
-        per_sample=True,
-        **kwargs
     ):
         """
         Args:
             keys: keys to normalize
             per_channel: normalize per channel
+            per_sample: normalize per sample or per batch
             grad: enable gradient computation inside transformation
             eps: small constant for numerical stability.
                 If None, no factor constant will be added
-            **kwargs: keyword arguments passed to normalization function
         """
         super().__init__(
             augment_fn=norm_min_max,
             keys=keys,
             grad=grad,
             per_channel=per_channel,
+            per_sample=per_sample,
             eps=eps,
-            per_sample=True,
             augment_fn_names=(
                 "per_channel",
                 "eps",
             ),
-            **kwargs
         )
 
 
@@ -179,19 +175,18 @@ class NormZeroMeanUnitStd(PerSampleTransformMixin, BaseTransform):
         self,
         keys: Sequence = ("data",),
         per_channel: bool = True,
+        per_sample=True,
         grad: bool = False,
         eps: Optional[float] = 1e-8,
-        per_sample=True,
-        **kwargs
     ):
         """
         Args:
             keys: keys to normalize
             per_channel: normalize per channel
+            per_sample: normalize per sample or per batch.
             grad: enable gradient computation inside transformation
             eps: small constant for numerical stability.
                 If None, no factor constant will be added
-            **kwargs: keyword arguments passed to normalization function
         """
         super().__init__(
             augment_fn=norm_zero_mean_unit_std,
@@ -201,7 +196,6 @@ class NormZeroMeanUnitStd(PerSampleTransformMixin, BaseTransform):
             augment_fn_names=("eps", "per_channel"),
             eps=eps,
             per_sample=per_sample,
-            **kwargs
         )
 
 
@@ -210,12 +204,12 @@ class NormMeanStd(PerSampleTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        mean: Union[float, Sequence[float]],
-        std: Union[float, Sequence[float]],
+        mean: ITEM_or_SEQ[Union[float, Sequence[float]]],
+        std: ITEM_or_SEQ[Union[float, Sequence[float]]],
         keys: Sequence[str] = ("data",),
         per_channel: bool = True,
-        grad: bool = False,
         per_sample=True,
+        grad: bool = False,
         **kwargs
     ):
         """
@@ -247,18 +241,19 @@ class NormMeanStd(PerSampleTransformMixin, BaseTransform):
 class GammaCorrection(BaseTransformMixin, BaseTransform):
     """Apply Gamma correction"""
 
-    def __init__(
-        self, gamma: Union[float, AbstractParameter], keys: Sequence = ("data",), grad: bool = False, **kwargs
-    ):
+    def __init__(self, gamma: Union[float, AbstractParameter], keys: Sequence = ("data",), grad: bool = False):
         """
         Args:
             gamma: define gamma
             keys: keys to normalize
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to superclass
         """
         super().__init__(
-            augment_fn=gamma_correction, keys=keys, grad=grad, augment_fn_names=("gamma",), gamma=gamma, **kwargs
+            augment_fn=gamma_correction,
+            keys=keys,
+            grad=grad,
+            augment_fn_names=("gamma",),
+            gamma=gamma,
         )
 
 
@@ -296,13 +291,12 @@ class ExponentialNoise(_Noise):
     .. warning:: This transform will apply different noise patterns to different keys.
     """
 
-    def __init__(self, lambd: float, keys: Sequence = ("data",), grad: bool = False, **kwargs):
+    def __init__(self, lambd: float, keys: Sequence = ("data",), grad: bool = False):
         """
         Args:
             lambd: lambda of exponential distribution
             keys: keys to normalize
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to noise function
         """
         super().__init__(
             noise_type="exponential_",
@@ -310,7 +304,6 @@ class ExponentialNoise(_Noise):
             keys=keys,
             grad=grad,
             augment_fn_names=("noise_type", "lambd"),
-            **kwargs
         )
 
 
@@ -321,14 +314,13 @@ class GaussianNoise(_Noise):
     .. warning:: This transform will apply different noise patterns to different keys.
     """
 
-    def __init__(self, mean: float, std: float, keys: Sequence = ("data",), grad: bool = False, **kwargs):
+    def __init__(self, mean: float, std: float, keys: Sequence = ("data",), grad: bool = False):
         """
         Args:
             mean: mean of normal distribution
             std: std of normal distribution
             keys: keys to normalize
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to noise function
         """
         super().__init__(
             noise_type="normal_",
@@ -337,7 +329,6 @@ class GaussianNoise(_Noise):
             keys=keys,
             grad=grad,
             augment_fn_names=("noise_type", "mean", "std"),
-            **kwargs
         )
 
 
@@ -356,19 +347,13 @@ class _RandomValuePerChannel(PerChannelTransformMixin, BaseTransform):
         per_channel: bool = False,
         keys: Sequence[str] = ("data",),
         grad: bool = False,
-        **kwargs
     ):
         """
         Args:
             augment_fn: augmentation function
-            random_mode: specifies distribution which should be used to
-                sample additive value. All function from python's random
-                module are supported
-            random_args: positional arguments passed for random function
             per_channel: enable transformation per channel
             keys: keys which should be augmented
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to augment_fn
         """
         super().__init__(
             augment_fn=augment_fn,
@@ -376,7 +361,6 @@ class _RandomValuePerChannel(PerChannelTransformMixin, BaseTransform):
             per_channel=per_channel,
             keys=keys,
             grad=grad,
-            **kwargs
         )
         self.register_sampler("value", random_sampler)
 
@@ -394,7 +378,6 @@ class RandomAddValue(_RandomValuePerChannel):
         per_channel: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
     ):
         """
         Args:
@@ -402,7 +385,6 @@ class RandomAddValue(_RandomValuePerChannel):
             per_channel: enable transformation per channel
             keys: keys which should be augmented
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to augment_fn
         """
         super().__init__(
             augment_fn=add_value,
@@ -411,7 +393,6 @@ class RandomAddValue(_RandomValuePerChannel):
             per_channel=per_channel,
             keys=keys,
             grad=grad,
-            **kwargs
         )
 
 
@@ -445,14 +426,18 @@ class RandomScaleValue(_RandomValuePerChannel):
             per_channel=per_channel,
             keys=keys,
             grad=grad,
-            **kwargs
         )
 
 
-class RandomBezierTransform(BaseTransform):
+class RandomBezierTransform(BaseTransformMixin, BaseTransform):
     """Apply a random 3rd order bezier spline to the intensity values, as proposed in Models Genesis."""
 
-    def __init__(self, maxv: float = 1.0, minv: float = 0.0, keys: Sequence = ("data",), **kwargs):
+    def __init__(
+        self,
+        maxv: float = 1.0,
+        minv: float = 0.0,
+        keys: Sequence = ("data",),
+    ):
         super().__init__(
             augment_fn=bezier_3rd_order,
             keys=keys,
@@ -460,17 +445,28 @@ class RandomBezierTransform(BaseTransform):
             maxv=maxv,
             augment_fn_names=("maxv", "minv"),
             minv=minv,
-            **kwargs
         )
 
 
-class InvertAmplitude(BaseTransform):
+class InvertAmplitude(BaseTransformMixin, BaseTransform):
     """
     Inverts the amplitude with probability p according to the following formula:
     out = maxv + minv - data
     """
 
-    def __init__(self, prob: float = 0.5, maxv: float = 1.0, minv: float = 0.0, keys: Sequence = ("data",), **kwargs):
+    def __init__(
+        self,
+        prob: float = 0.5,
+        maxv: float = 1.0,
+        minv: float = 0.0,
+        keys: Sequence = ("data",),
+    ):
         super().__init__(
-            augment_fn=random_inversion, keys=keys, grad=False, prob_inversion=prob, maxv=maxv, minv=minv, **kwargs
+            augment_fn=random_inversion,
+            keys=keys,
+            grad=False,
+            prob_inversion=prob,
+            maxv=maxv,
+            minv=minv,
+            augment_fn_names=("prob_inversion", "maxv", "minv"),
         )

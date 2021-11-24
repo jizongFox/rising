@@ -5,7 +5,7 @@ from typing import Callable, Optional, Sequence, Union
 from torch.multiprocessing import Value
 
 from rising.random import AbstractParameter, DiscreteParameter
-from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSampleTransformMixin, item_or_seq
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, ITEM_or_SEQ, PerSampleTransformMixin
 from rising.transforms.functional import mirror, resize_native, rot90
 
 __all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "SizeStepScheduler"]
@@ -21,7 +21,7 @@ class Mirror(PerSampleTransformMixin, BaseTransform):
     def __init__(
         self,
         *,
-        dims=item_or_seq[Union[int, DiscreteParameter]],
+        dims=ITEM_or_SEQ[Union[int, DiscreteParameter]],
         p_sample: float = 0.5,
         keys: Sequence[str] = ("data",),
         grad: bool = False,
@@ -51,7 +51,7 @@ class Rot90(PerSampleTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        dims: item_or_seq[Union[Sequence[int], DiscreteParameter]],
+        dims: ITEM_or_SEQ[Union[Sequence[int], DiscreteParameter]],
         keys: Sequence[str] = ("data",),
         num_rots: DiscreteParameter = DiscreteParameter((0, 1, 2, 3)),
         p_sample: float = 0.5,
@@ -96,8 +96,8 @@ class ResizeNative(BaseTransformMixin, BaseTransform):
     def __init__(
         self,
         size: Union[int, Sequence[int]],
-        mode: item_or_seq[FInterpolation] = FInterpolation.nearest,
-        align_corners: item_or_seq[bool] = None,
+        mode: ITEM_or_SEQ[FInterpolation] = FInterpolation.nearest,
+        align_corners: ITEM_or_SEQ[bool] = None,
         preserve_range: bool = False,
         keys: Sequence[str] = ("data",),
         grad: bool = False,
@@ -142,8 +142,8 @@ class Zoom(BaseTransformMixin, BaseTransform):
     def __init__(
         self,
         scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
-        mode: item_or_seq[FInterpolation] = FInterpolation.nearest,
-        align_corners: item_or_seq[bool] = None,
+        mode: ITEM_or_SEQ[FInterpolation] = FInterpolation.nearest,
+        align_corners: ITEM_or_SEQ[bool] = None,
         preserve_range: bool = False,
         keys: Sequence[str] = ("data",),
         grad: bool = False,
@@ -190,8 +190,8 @@ class ProgressiveResize(ResizeNative):
     def __init__(
         self,
         scheduler: scheduler_type,
-        mode: item_or_seq[FInterpolation] = FInterpolation.nearest,
-        align_corners: item_or_seq[Optional[bool]] = None,
+        mode: ITEM_or_SEQ[FInterpolation] = FInterpolation.nearest,
+        align_corners: ITEM_or_SEQ[Optional[bool]] = None,
         preserve_range: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,

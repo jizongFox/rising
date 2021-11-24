@@ -65,12 +65,11 @@ class PadRandomCrop(PerSampleTransformMixin, BaseTransform):
         pad_value: int = 0,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
     ):
         """
         Args:
             size: random crop size
-            pad: int, sequence[int], padding image to size+pad
+            pad_size: int, sequence[int], padding image to size+pad
         """
         super(PadRandomCrop, self).__init__(
             augment_fn=pad_random_crop,
