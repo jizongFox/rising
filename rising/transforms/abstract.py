@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, final
 
 import torch
+from torch import nn
 
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import fix_seed_cxm, ntuple, nullcxm
@@ -22,7 +23,7 @@ augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
 
-class _AbstractTransform(torch.nn.Module):
+class _AbstractTransform(nn.Module):
     """Base class for all transforms"""
 
     def __init__(self, grad: bool = False, **kwargs):
@@ -107,6 +108,7 @@ class _AbstractTransform(torch.nn.Module):
         else:
             return res
 
+    @final
     def __call__(self, *args, **kwargs) -> Any:
         """
         Call super class with correct torch context
@@ -127,6 +129,7 @@ class _AbstractTransform(torch.nn.Module):
         with context:
             return super().__call__(*args, **kwargs)
 
+    @abstractmethod
     def forward(self, **data) -> dict:
         """
         Implement transform functionality here
@@ -176,7 +179,7 @@ class BaseTransform(_AbstractTransform, ABC):
     ):
         """
         Args:
-            augment_fn: function for augmentatioN
+            augment_fn: function for augmentation
                     Modification made here: all augment_fu accept data under form of BCHW(D) form.
             *args: positional arguments passed to augment_fn
             keys: keys which should be augmented
@@ -188,7 +191,7 @@ class BaseTransform(_AbstractTransform, ABC):
         super().__init__(grad=grad, **kwargs)
         sampler_vals = {k: v for k, v in kwargs.items() if self.need_sampler(v)}
 
-        self._paired_kw_names: List[str] = []
+        self._paired_kw_names: List[str] = []  # hidden list
         self._augment_fn_names = augment_fn_names  # kwargs passed to the augment_fn
         self.paired_kw_names = paired_kw_names
 
@@ -206,20 +209,20 @@ class BaseTransform(_AbstractTransform, ABC):
         for name, val in sampler_vals.items():
             self.register_sampler(name, val)  # lazy sampling values
 
-    def sample_for_batch(self, name: str, batchsize: int) -> Optional[Union[Any, Sequence[Any]]]:
+    def sample_for_batch(self, name: str, batch_size: int) -> Optional[Union[Any, Sequence[Any]]]:
         """
         Sample elements for batch
 
         Args:
             name: name of parameter
-            batchsize: batch size
+            batch_size: batch size
 
         Returns:
             Optional[Union[Any, Sequence[Any]]]: sampled elements
         """
         elem = getattr(self, name)
         if elem is not None and self.per_sample:
-            return [elem] + [getattr(self, name) for _ in range(batchsize - 1)]
+            return [elem] + [getattr(self, name) for _ in range(batch_size - 1)]
         else:
             return elem  # either a single scalar value or None
 
@@ -288,7 +291,7 @@ class BaseTransformMixin(_BaseMixin):
         """
         seed = int(torch.randint(0, int(1e16), (1,)))
 
-        for _ik, _key in enumerate(self.keys):
+        for _key in self.keys:
             with self.random_cxm(seed):
                 kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                 kwargs.update(self.get_pair_kwargs(_key))
@@ -333,14 +336,13 @@ class PerSampleTransformMixin(BaseTransformMixin):
 
         seed = int(torch.randint(0, int(1e16), (1,)))
 
-        for _ik, _key in enumerate(self.keys):
+        for _key in self.keys:
             batch_size = data[_key].shape[0]
             out = []
             for b in range(batch_size):
                 with self.random_cxm(seed + b):
                     kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                     kwargs.update(self.get_pair_kwargs(_key))
-                    print(seed + b, kwargs)
 
                     if torch.rand(1).item() < self.p:
                         out.append(self.augment_fn(data[_key][b][None, ...], **kwargs))
@@ -388,7 +390,7 @@ class PerChannelTransformMixin(BaseTransformMixin):
 
         seed = int(torch.randint(0, int(1e16), (1,)))
 
-        for _ik, _key in enumerate(self.keys):
+        for _key in self.keys:
             out = []
             channel_dim = data[_key].shape[1]
             for c in range(channel_dim):

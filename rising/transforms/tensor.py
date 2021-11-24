@@ -89,7 +89,15 @@ class ToDevice(_ToDeviceDtype):
             grad: enable gradient computation inside transformation
             **kwargs: keyword arguments passed to function
         """
-        super().__init__(device=device, non_blocking=non_blocking, copy=copy, keys=keys, grad=grad, **kwargs)
+        super().__init__(
+            device=device,
+            non_blocking=non_blocking,
+            copy=copy,
+            keys=keys,
+            grad=grad,
+            augment_fn_names=("device",),
+            **kwargs,
+        )
 
 
 class ToDtype(_ToDeviceDtype):
@@ -103,7 +111,7 @@ class ToDtype(_ToDeviceDtype):
             grad: enable gradient computation inside transformation
             kwargs: keyword arguments passed to function
         """
-        super().__init__(dtype=dtype, keys=keys, grad=grad, **kwargs)
+        super().__init__(dtype=dtype, keys=keys, grad=grad, augment_fn_names=("dtype",), **kwargs)
 
 
 class TensorOp(BaseTransformMixin, BaseTransform):

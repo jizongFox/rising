@@ -112,13 +112,13 @@ class Compose(_AbstractTransform):
         assert len(self.transforms) == len(self.transform_order)
         data = seq_like if seq_like else map_like
 
-        seed = torch.randint(0, int(1e6), (1,))
-        torch.set_rng_state(seed)
+        seed = int(torch.randint(0, int(1e6), (1,)))
+        torch.manual_seed(seed)
         if self.shuffle:
             self.shuffle_transform()
 
         for idx in self.transform_order:
-            torch.set_rng_state(seed + idx)
+            torch.manual_seed(seed + idx)
             data = self.transform_call(data, self.transforms[idx])
         return data
 

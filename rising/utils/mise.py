@@ -8,6 +8,7 @@ from itertools import repeat
 import numpy as np
 import torch
 from torch import Tensor
+from torch import multiprocessing as mp
 
 T = t.TypeVar("T")
 
@@ -103,8 +104,13 @@ class fixed_random_seed:
         return generator_context
 
 
+def on_main_process():
+    return mp.current_process().name == "MainProcess"
+
+
 @contextmanager
-def fix_seed_cxm(seed: int = 10, cuda: bool = True):
+def fix_seed_cxm(seed: int = 10, **kwargs):
+    cuda = on_main_process()
     with fixed_torch_seed(seed=seed, cuda=cuda):
         with fixed_random_seed(seed=seed):
             try:

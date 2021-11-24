@@ -126,11 +126,11 @@ def norm_min_max_percentile(
         out = torch.empty_like(data)
 
     if per_channel:
-        for i, data_ in enumerate(data.shape[1]):
-            min_ = torch.quantile(data_.float(), float(min))
-            max_ = torch.quantile(data_.float(), float(max))
+        for i in range(data.shape[1]):
+            min_ = torch.quantile(data[:, i].float(), float(min))
+            max_ = torch.quantile(data[:, i].float().float(), float(max))
             out[:, i] = clamp(
-                data_,
+                data[:, i],
                 min=float(min_),
                 max=float(max_),
             )

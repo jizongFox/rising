@@ -8,9 +8,7 @@ from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 from rising.utils.checktype import check_scalar
 
 __all__ = [
-    "Affine",
     "BaseAffine",
-    "StackedAffine",
     "Rotate",
     "Scale",
     "Translate",
@@ -18,7 +16,7 @@ __all__ = [
 ]
 
 
-class Affine(BaseTransform):
+class _Affine(BaseTransform):
     """
     Class Performing an Affine Transformation on a given sample dict.
     The transformation will be applied to all the dict-entries specified
@@ -81,6 +79,7 @@ class Affine(BaseTransform):
             seeded=True,
             **kwargs,
         )
+        self.kwargs = kwargs
         self.matrix = matrix
         self.register_sampler("output_size", output_size)
         self.adjust_size = adjust_size
@@ -107,22 +106,22 @@ class Affine(BaseTransform):
             self.matrix = torch.tensor(self.matrix)
         self.matrix = self.matrix.to(data[self.keys[0]])
 
-        batchsize = data[self.keys[0]].shape[0]
+        batch_size = data[self.keys[0]].shape[0]
         ndim = len(data[self.keys[0]].shape) - 2  # channel and batch dim
 
         # batch dimension missing -> Replicate for each sample in batch
         if len(self.matrix.shape) == 2:
-            self.matrix = self.matrix[None].expand(batchsize, -1, -1).clone()
-        if self.matrix.shape == (batchsize, ndim, ndim + 1):
+            self.matrix = self.matrix[None].expand(batch_size, -1, -1).clone()
+        if self.matrix.shape == (batch_size, ndim, ndim + 1):
             return self.matrix
-        elif self.matrix.shape == (batchsize, ndim, ndim):
+        elif self.matrix.shape == (batch_size, ndim, ndim):
             return matrix_to_homogeneous(self.matrix)[:, :-1]
-        elif self.matrix.shape == (batchsize, ndim + 1, ndim + 1):
+        elif self.matrix.shape == (batch_size, ndim + 1, ndim + 1):
             return matrix_to_cartesian(self.matrix)
 
         raise ValueError(
             "Invalid Shape for affine transformation matrix. "
-            "Got %s but expected %s" % (str(tuple(self.matrix.shape)), str((batchsize, ndim, ndim + 1)))
+            "Got %s but expected %s" % (str(tuple(self.matrix.shape)), str((batch_size, ndim, ndim + 1)))
         )
 
     def forward(self, **data) -> dict:
@@ -162,10 +161,10 @@ class Affine(BaseTransform):
             other: the other transformation
 
         Returns:
-            StackedAffine: a stacked affine transformation
+            _StackedAffine: a stacked affine transformation
         """
-        if not isinstance(other, Affine):
-            other = Affine(
+        if not isinstance(other, _Affine):
+            other = _Affine(
                 matrix=other,
                 keys=self.keys,
                 grad=self.grad,
@@ -174,10 +173,11 @@ class Affine(BaseTransform):
                 interpolation_mode=self.interpolation_mode,
                 padding_mode=self.padding_mode,
                 align_corners=self.align_corners,
+                per_sample=self.per_sample,
                 **self.kwargs,
             )
 
-        return StackedAffine(
+        return _StackedAffine(
             self,
             other,
             keys=self.keys,
@@ -187,6 +187,7 @@ class Affine(BaseTransform):
             interpolation_mode=self.interpolation_mode,
             padding_mode=self.padding_mode,
             align_corners=self.align_corners,
+            per_sample=self.per_sample,
             **self.kwargs,
         )
 
@@ -199,10 +200,10 @@ class Affine(BaseTransform):
             other: the other transformation
 
         Returns:
-            StackedAffine: a stacked affine transformation
+            _StackedAffine: a stacked affine transformation
         """
-        if not isinstance(other, Affine):
-            other = Affine(
+        if not isinstance(other, _Affine):
+            other = _Affine(
                 matrix=other,
                 keys=self.keys,
                 grad=self.grad,
@@ -211,10 +212,10 @@ class Affine(BaseTransform):
                 interpolation_mode=self.interpolation_mode,
                 padding_mode=self.padding_mode,
                 align_corners=self.align_corners,
-                **self.kwargs,
+                # **self.kwargs,
             )
 
-        return StackedAffine(
+        return _StackedAffine(
             other,
             self,
             grad=other.grad,
@@ -223,11 +224,11 @@ class Affine(BaseTransform):
             interpolation_mode=other.interpolation_mode,
             padding_mode=other.padding_mode,
             align_corners=other.align_corners,
-            **other.kwargs,
+            # **other.kwargs,
         )
 
 
-class StackedAffine(Affine):
+class _StackedAffine(_Affine):
     """
     Class to stack multiple affines with dynamic ensembling by matrix
     multiplication to avoid multiple interpolations.
@@ -235,7 +236,7 @@ class StackedAffine(Affine):
 
     def __init__(
         self,
-        *transforms: Union[Affine, Sequence[Union[Sequence[Affine], Affine]]],
+        *transforms: Union[_Affine, Sequence[Union[Sequence[_Affine], _Affine]]],
         keys: Sequence = ("data",),
         grad: bool = False,
         output_size: Optional[tuple] = None,
@@ -284,7 +285,7 @@ class StackedAffine(Affine):
                 transforms = transforms[0]
 
         # ensure trafos are Affines and not raw matrices
-        transforms = tuple([trafo if isinstance(trafo, Affine) else Affine(matrix=trafo) for trafo in transforms])
+        transforms = tuple([trafo if isinstance(trafo, _Affine) else _Affine(matrix=trafo) for trafo in transforms])
 
         super().__init__(
             keys=keys,
@@ -323,10 +324,7 @@ class StackedAffine(Affine):
         return matrix_to_cartesian(whole_trafo)
 
 
-class BaseAffine(
-    Affine,
-    BaseTransformMixin,
-):
+class BaseAffine(_Affine, BaseTransformMixin):
     """
     Class performing a basic Affine Transformation on a given sample dict.
     The transformation will be applied to all the dict-entries specified
@@ -445,21 +443,21 @@ class BaseAffine(
         Returns:
             torch.Tensor: the (batched) transformation matrix
         """
-        batchsize = data[self.keys[0]].shape[0]
+        batch_size = data[self.keys[0]].shape[0]
         ndim = len(data[self.keys[0]].shape) - 2  # channel and batch dim
         device = data[self.keys[0]].device
         dtype = data[self.keys[0]].dtype
         seed = int(torch.randint(0, int(1e6), (1,)))
 
-        scale = self.sample_for_batch_with_prob("scale", batchsize, default_value=1.0, seed=seed)
-        rotation = self.sample_for_batch_with_prob("rotation", batchsize, default_value=0.0, seed=seed)
-        translation = self.sample_for_batch_with_prob("translation", batchsize, default_value=0.0, seed=seed)
+        scale = self.sample_for_batch_with_prob("scale", batch_size, default_value=1.0, seed=seed)
+        rotation = self.sample_for_batch_with_prob("rotation", batch_size, default_value=0.0, seed=seed)
+        translation = self.sample_for_batch_with_prob("translation", batch_size, default_value=0.0, seed=seed)
 
         self.matrix = parametrize_matrix(
             scale=scale,
             rotation=rotation,
             translation=translation,
-            batchsize=batchsize,
+            batchsize=batch_size,
             ndim=ndim,
             degree=self.degree,
             device=device,
@@ -468,25 +466,8 @@ class BaseAffine(
         )
         return self.matrix
 
-    def sample_for_batch(self, name: str, batchsize: int) -> Optional[Union[Any, Sequence[Any]]]:
-        """
-        Sample elements for batch
-
-        Args:
-            name: name of parameter
-            batchsize: batch size
-
-        Returns:
-            Optional[Union[Any, Sequence[Any]]]: sampled elements
-        """
-        elem = getattr(self, name)
-        if elem is not None and self.per_sample:
-            return [elem] + [getattr(self, name) for _ in range(batchsize - 1)]
-        else:
-            return elem  # either a single scalar value or None
-
-    def sample_for_batch_with_prob(self, name: str, batchsize: int, *, default_value: float, seed: int):
-        batch_element = self.sample_for_batch(name, batchsize)
+    def sample_for_batch_with_prob(self, name: str, batch_size: int, *, default_value: float, seed: int):
+        batch_element = self.sample_for_batch(name, batch_size)
         if batch_element is None:
             return batch_element
         with self.random_cxm(seed=int(seed)):

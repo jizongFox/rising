@@ -3,7 +3,7 @@ import unittest
 import torch
 
 from rising.random import UniformParameter
-from rising.transforms.affine import Affine, BaseAffine, Resize, Rotate, Scale, StackedAffine, Translate
+from rising.transforms._affine import BaseAffine, Resize, Rotate, Scale, Translate, _Affine, _StackedAffine
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 
 
@@ -20,7 +20,7 @@ class AffineTestCase(unittest.TestCase):
                 target_size = target_sizes.pop(0)
 
                 with self.subTest(adjust_size=adjust_size, target_size=target_size, output_size=output_size):
-                    trafo = Affine(matrix=matrix, adjust_size=adjust_size, output_size=output_size)
+                    trafo = _Affine(matrix=matrix, adjust_size=adjust_size, output_size=output_size)
                     sample = {"data": image_batch, "label": 4}
                     if output_size is not None and adjust_size:
                         with self.assertWarns(UserWarning):
@@ -51,7 +51,7 @@ class AffineTestCase(unittest.TestCase):
 
         for matrix, expected, ve in zip(matrices, expected_matrices, value_error):
             with self.subTest(matrix=matrix, expected=expected):
-                trafo = Affine(matrix=matrix)
+                trafo = _Affine(matrix=matrix)
                 if ve:
                     with self.assertRaises(ValueError):
                         assembled = trafo.assemble_matrix(**batch)
@@ -61,15 +61,15 @@ class AffineTestCase(unittest.TestCase):
 
     def test_affine_stacking(self):
         affines = [
-            Affine(scale=1),
+            _Affine(scale=1),
             [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
             torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            StackedAffine(Affine(scale=1), Affine(scale=1)),
+            _StackedAffine(_Affine(scale=1), _Affine(scale=1)),
         ]
 
         for first_affine in affines:
             for second_affine in affines:
-                if not isinstance(first_affine, Affine) and not isinstance(second_affine, Affine):
+                if not isinstance(first_affine, _Affine) and not isinstance(second_affine, _Affine):
                     continue
 
                 if torch.is_tensor(first_affine):
@@ -79,12 +79,12 @@ class AffineTestCase(unittest.TestCase):
 
                 with self.subTest(first_affine=first_affine, second_affine=second_affine):
                     result = first_affine + second_affine
-                    self.assertIsInstance(result, StackedAffine)
+                    self.assertIsInstance(result, _StackedAffine)
 
     def test_stacked_transformation_assembly(self):
         first_matrix = torch.tensor([[[2.0, 0.0, 1.0], [0.0, 3.0, 2.0]]])
         second_matrix = torch.tensor([[[4.0, 0.0, 3.0], [0.0, 5.0, 4.0]]])
-        trafo = StackedAffine([first_matrix, second_matrix])
+        trafo = _StackedAffine([first_matrix, second_matrix])
 
         sample = {"data": torch.rand(1, 3, 25, 25)}
 
@@ -161,12 +161,12 @@ class AffineTestCase(unittest.TestCase):
         self.assertTrue(expected.allclose(expected))
 
     def test_affine_prob(self):
-        image = torch.randn(13, 1, 224, 224)
-        prob = torch.randn(13, 1, 224, 224)
+        image = torch.randn(13, 1, 224, 224, 224)
+        prob = torch.randn(13, 1, 224, 224, 224)
         translate = BaseAffine(
-            rotation=(UniformParameter(-10, 10), UniformParameter(-10, 10)),
+            rotation=UniformParameter(-10, 10),
             degree=True,
-            scale=(UniformParameter(-10, 10), UniformParameter(-10, 10)),
+            scale=UniformParameter(-10, 10),
             keys=("data", "prob"),
         )
         image_, prob_ = translate(data=image, prob=prob).values()

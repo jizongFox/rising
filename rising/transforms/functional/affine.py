@@ -23,6 +23,7 @@ __all__ = [
     "create_scale",
     "create_translation",
     "parametrize_matrix",
+    "AffineParamType",
 ]
 
 from rising.utils.inverse import orthogonal_inverse
