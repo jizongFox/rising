@@ -338,3 +338,10 @@ def random_inversion(
         out = data
 
     return out
+
+
+def augment_rician_noise(data, std: float):
+    data = torch.sqrt((data + torch.randn_like(data) * std).pow(2) + (torch.randn_like(data) * std) ** 2) * torch.sign(
+        data
+    )
+    return data

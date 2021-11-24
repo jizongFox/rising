@@ -12,6 +12,7 @@ from rising.transforms.abstract import (
 from rising.transforms.functional.intensity import (
     add_noise,
     add_value,
+    augment_rician_noise,
     bezier_3rd_order,
     clamp,
     gamma_correction,
@@ -40,6 +41,7 @@ __all__ = [
     "RandomScaleValue",
     "RandomBezierTransform",
     "InvertAmplitude",
+    "RicianNoiseTransform",
 ]
 
 
@@ -210,7 +212,7 @@ class NormMeanStd(PerSampleTransformMixin, BaseTransform):
         per_channel: bool = True,
         per_sample=True,
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -234,7 +236,7 @@ class NormMeanStd(PerSampleTransformMixin, BaseTransform):
             ),
             augment_fn_names=("mean", "std", "per_channel"),
             per_sample=per_sample,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -409,7 +411,7 @@ class RandomScaleValue(_RandomValuePerChannel):
         per_channel: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -470,3 +472,28 @@ class InvertAmplitude(BaseTransformMixin, BaseTransform):
             minv=minv,
             augment_fn_names=("prob_inversion", "maxv", "minv"),
         )
+
+
+class RicianNoiseTransform(BaseTransformMixin, BaseTransform):
+    def __init__(
+        self,
+        *,
+        keys: Sequence[str],
+        grad: bool,
+        std: Union[float, AbstractParameter],
+        p=1,
+    ):
+        """Adds rician noise with the given std.
+        The Noise of MRI data tends to have a rician distribution: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2254141/
+        Args:
+            std :  Union[float, AbstractParameter], samples std of Gaussian distribution used to calculate
+        CAREFUL: This transform will modify the value range of your data!
+
+        adapted from batchgenerators:
+        https://github.com/MIC-DKFZ/batchgenerators/blob/master/batchgenerators/transforms/noise_transforms.py
+        """
+
+        super().__init__(
+            augment_fn=augment_rician_noise, p=p, keys=keys, grad=grad, augment_fn_names=("std",), per_sample=True
+        )
+        self.register_sampler("std", std)
