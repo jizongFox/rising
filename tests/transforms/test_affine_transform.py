@@ -5,7 +5,7 @@ import SimpleITK as sitk
 import torch
 
 from rising.random import UniformParameter
-from rising.transforms._affine import BaseAffine, Resize, Rotate, Scale, Translate, _Affine, _StackedAffine
+from rising.transforms.affine import BaseAffine, Resize, Rotate, Scale, Translate, _Affine, _StackedAffine
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 
 

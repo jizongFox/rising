@@ -7,20 +7,20 @@ from torch import nn
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import fix_seed_cxm, ntuple, nullcxm
 
+T = TypeVar("T")
+TYPE_item_seq = Union[T, Sequence[T]]
+
+augment_callable = Callable[..., Any]
+augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
+
 __all__ = [
     "_AbstractTransform",
-    "ITEM_or_SEQ",
+    "TYPE_item_seq",
     "BaseTransform",
     "PerChannelTransformMixin",
     "PerSampleTransformMixin",
     "BaseTransformMixin",
 ]
-
-T = TypeVar("T")
-ITEM_or_SEQ = Union[T, Sequence[T]]
-
-augment_callable = Callable[..., Any]
-augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
 
 class _AbstractTransform(nn.Module):
@@ -174,7 +174,7 @@ class BaseTransform(_AbstractTransform, ABC):
         keys: Sequence[str] = ("data",),
         grad: bool = False,
         paired_kw_names: Sequence[str] = (),
-        augment_fn_names: Sequence[str],
+        augment_fn_names: Sequence[str] = (),
         per_sample: bool = True,
         **kwargs,
     ):
@@ -227,7 +227,7 @@ class BaseTransform(_AbstractTransform, ABC):
         else:
             return elem  # either a single scalar value or None
 
-    def register_paired_attribute(self, name: str, value: ITEM_or_SEQ[T]):
+    def register_paired_attribute(self, name: str, value: TYPE_item_seq[T]):
         if name in self._paired_kw_names:
             raise ValueError(f"{name} has been registered in self._pair_kwarg_names")
         if name not in self._augment_fn_names:
@@ -367,7 +367,7 @@ class PerChannelTransformMixin(BaseTransformMixin):
         result in different augmentations per channel and key.
     """
 
-    def __init__(self, *, per_channel: bool, **kwargs):
+    def __init__(self, *, per_channel: bool, p: float = 1, **kwargs):
         """
         Args:
             per_channel:bool parameter to perform per_channel operation
@@ -375,6 +375,7 @@ class PerChannelTransformMixin(BaseTransformMixin):
         """
         super().__init__(**kwargs)
         self.per_channel = per_channel
+        self.p = p
 
     def forward(self, **data) -> dict:
         """
@@ -398,8 +399,61 @@ class PerChannelTransformMixin(BaseTransformMixin):
                 with self.random_cxm(seed + c):
                     kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                     kwargs.update(self.get_pair_kwargs(key))
-
-                    out.append(self.augment_fn(data[key][:, c].unsqueeze(1), **kwargs))
+                    if torch.rand(1).item() < self.p:
+                        out.append(self.augment_fn(data[key][:, c].unsqueeze(1), **kwargs))
+                    else:
+                        out.append(data[key][:, c].unsqueeze(1))
             data[key] = torch.cat(out, dim=1)
+
+        return data
+
+
+class PerSamplePerChannelTransformMixin(BaseTransformMixin):
+    def __init__(self, *, per_channel: bool, p_channel: float = 1, per_sample: bool, p_sample: float = 1, **kwargs):
+        """
+        Args:
+            per_channel:bool parameter to perform per_channel operation
+            kwargs: base parameters
+        """
+        super().__init__(**kwargs)
+        self.per_channel = per_channel
+        self.p_channel = p_channel
+
+        self.per_sample = per_sample
+        self.p_sample = p_sample
+
+    def forward(self, **data) -> dict:
+        """
+        Apply transformation
+
+        Args:
+            data: dict with tensors
+
+        Returns:
+            dict: dict with augmented data
+        """
+        if not self.per_channel:
+            self.p = self.p_sample
+            return PerSampleTransformMixin.forward(self, **data)
+        if not self.per_sample:
+            self.p = self.p_channel
+            return PerChannelTransformMixin.forward(self, **data)
+
+        seed = int(torch.randint(0, int(1e16), (1,)))
+
+        for key in self.keys:
+            batch_size, channel_dim = data[key].shape[0:2]
+            for b in range(batch_size):
+                cur_data = data[key]
+                processed_batch = []
+                for c in range(channel_dim):
+                    with self.random_cxm(seed + b + c):
+                        kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
+                        kwargs.update(self.get_pair_kwargs(key))
+                        if torch.rand(1).item() < self.p:
+                            processed_batch.append(self.augment_fn(cur_data[b, c][None, None, ...], **kwargs))
+                        else:
+                            processed_batch.append(data[key][:, c][None, None, ...])
+                data[key][b] = torch.cat(processed_batch, dim=1)[0]
 
         return data

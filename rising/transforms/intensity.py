@@ -4,9 +4,9 @@ from rising.random import AbstractParameter
 from rising.transforms.abstract import (
     BaseTransform,
     BaseTransformMixin,
-    ITEM_or_SEQ,
     PerChannelTransformMixin,
     PerSampleTransformMixin,
+    TYPE_item_seq,
     augment_callable,
 )
 from rising.transforms.functional.intensity import (
@@ -48,8 +48,8 @@ class Clamp(BaseTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        min: ITEM_or_SEQ[Union[float, AbstractParameter]],
-        max: ITEM_or_SEQ[Union[float, AbstractParameter]],
+        min: TYPE_item_seq[Union[float, AbstractParameter]],
+        max: TYPE_item_seq[Union[float, AbstractParameter]],
         keys: Sequence = ("data",),
         grad: bool = False,
     ):
@@ -74,8 +74,8 @@ class Clamp(BaseTransformMixin, BaseTransform):
 class NormRange(PerSampleTransformMixin, BaseTransform):
     def __init__(
         self,
-        min: ITEM_or_SEQ[Union[float, AbstractParameter]],
-        max: ITEM_or_SEQ[Union[float, AbstractParameter]],
+        min: TYPE_item_seq[Union[float, AbstractParameter]],
+        max: TYPE_item_seq[Union[float, AbstractParameter]],
         keys: Sequence = ("data",),
         per_channel: bool = True,
         per_sample=True,
@@ -107,8 +107,8 @@ class NormPercentile(PerSampleTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        min: ITEM_or_SEQ[Union[float, AbstractParameter]],
-        max: ITEM_or_SEQ[Union[float, AbstractParameter]],
+        min: TYPE_item_seq[Union[float, AbstractParameter]],
+        max: TYPE_item_seq[Union[float, AbstractParameter]],
         keys: Sequence[str] = ("data",),
         grad: bool = False,
         per_channel: bool = True,
@@ -204,8 +204,8 @@ class NormMeanStd(PerSampleTransformMixin, BaseTransform):
 
     def __init__(
         self,
-        mean: ITEM_or_SEQ[Union[float, Sequence[float]]],
-        std: ITEM_or_SEQ[Union[float, Sequence[float]]],
+        mean: TYPE_item_seq[Union[float, Sequence[float]]],
+        std: TYPE_item_seq[Union[float, Sequence[float]]],
         keys: Sequence[str] = ("data",),
         per_channel: bool = True,
         per_sample=True,

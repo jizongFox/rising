@@ -2,7 +2,7 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
-from rising.transforms.abstract import BaseTransform, BaseTransformMixin, ITEM_or_SEQ
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, TYPE_item_seq
 from rising.transforms.functional.affine import AffineParamType, affine_image_transform, parametrize_matrix
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 from rising.utils.checktype import check_scalar
@@ -30,12 +30,11 @@ class _Affine(BaseTransform):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[bool] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
-        **kwargs,
     ):
         """
         Args:
@@ -67,19 +66,13 @@ class _Affine(BaseTransform):
                 batch order [(D,)H,W]
             per_sample: sample different values for each element in the batch.
                 The transform is still applied in a batched wise fashion.
-            **kwargs: additional keyword arguments passed to the
-                affine transform
         """
         super().__init__(
             augment_fn=affine_image_transform,
             keys=keys,
             per_sample=per_sample,
-            augment_fn_names=(),
             grad=grad,
-            seeded=True,
-            **kwargs,
         )
-        self.kwargs = kwargs
         self.matrix = matrix
         self.register_sampler("output_size", output_size)
         self.adjust_size = adjust_size
@@ -212,7 +205,6 @@ class _Affine(BaseTransform):
                 interpolation_mode=self.interpolation_mode,
                 padding_mode=self.padding_mode,
                 align_corners=self.align_corners,
-                # **self.kwargs,
             )
 
         return _StackedAffine(
@@ -224,7 +216,6 @@ class _Affine(BaseTransform):
             interpolation_mode=other.interpolation_mode,
             padding_mode=other.padding_mode,
             align_corners=other.align_corners,
-            # **other.kwargs,
         )
 
 
@@ -241,11 +232,11 @@ class _StackedAffine(_Affine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[bool] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
         reverse_order: bool = False,
-        **kwargs,
+        per_sample=True,
     ):
         """
         Args:
@@ -296,7 +287,7 @@ class _StackedAffine(_Affine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
-            **kwargs,
+            per_sample=per_sample,
         )
 
         self.transforms = transforms
@@ -341,13 +332,12 @@ class BaseAffine(_Affine, BaseTransformMixin):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[Optional[bool]] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[Optional[bool]] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         p: float = 1,
-        **kwargs,
     ):
         """
         Args:
@@ -408,8 +398,7 @@ class BaseAffine(_Affine, BaseTransformMixin):
             per_sample: sample different values for each element in the batch.
                 The transform is still applied in a batched wise fashion.
             p: float, the probability of applying the transformation on batches.
-            **kwargs: additional keyword arguments passed to the
-                affine transform
+
         """
         super().__init__(
             keys=keys,
@@ -422,7 +411,6 @@ class BaseAffine(_Affine, BaseTransformMixin):
             reverse_order=reverse_order,
             per_sample=per_sample,
             p=p,
-            **kwargs,
         )
         self.register_sampler("scale", scale)
         self.register_sampler("rotation", rotation)
@@ -447,6 +435,7 @@ class BaseAffine(_Affine, BaseTransformMixin):
         ndim = len(data[self.keys[0]].shape) - 2  # channel and batch dim
         device = data[self.keys[0]].device
         dtype = data[self.keys[0]].dtype
+
         seed = int(torch.randint(0, int(1e6), (1,)))
 
         scale = self.sample_for_batch_with_prob("scale", batch_size, default_value=1.0, seed=seed)
@@ -502,13 +491,12 @@ class Rotate(BaseAffine):
         degree: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[bool] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         p: float = 1,
-        **kwargs,
     ):
         """
         Args:
@@ -544,8 +532,6 @@ class Rotate(BaseAffine):
                 transformation to conform to the pytorch convention:
                 transformation params order [W,H(,D)] and
                 batch order [(D,)H,W]
-            **kwargs: additional keyword arguments passed to the
-                affine transform
         """
         super().__init__(
             scale=None,
@@ -563,7 +549,6 @@ class Rotate(BaseAffine):
             reverse_order=reverse_order,
             per_sample=per_sample,
             p=p,
-            **kwargs,
         )
 
 
@@ -582,9 +567,9 @@ class Translate(BaseAffine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[bool] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
         unit: str = "pixel",
         reverse_order: bool = False,
         per_sample: bool = True,
@@ -681,9 +666,9 @@ class Scale(BaseAffine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[bool] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
         p: float = 1,
@@ -758,9 +743,9 @@ class Resize(Scale):
         size: Union[int, Tuple[int]],
         keys: Sequence[str] = ("data",),
         grad: bool = False,
-        interpolation_mode: ITEM_or_SEQ[str] = "bilinear",
-        padding_mode: ITEM_or_SEQ[str] = "zeros",
-        align_corners: ITEM_or_SEQ[bool] = False,
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
         reverse_order: bool = False,
         **kwargs,
     ):

@@ -109,11 +109,7 @@ def on_main_process():
 
 
 @contextmanager
-def fix_seed_cxm(seed: int = 10, **kwargs):
-    cuda = on_main_process()
-    with fixed_torch_seed(seed=seed, cuda=cuda):
-        with fixed_random_seed(seed=seed):
-            try:
-                yield
-            finally:
-                pass
+def fix_seed_cxm(seed: int = 10):
+    cuda = on_main_process() and torch.cuda.is_available()
+    with fixed_torch_seed(seed=seed, cuda=cuda), fixed_random_seed(seed=seed):
+        yield

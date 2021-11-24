@@ -19,7 +19,6 @@ Implementations include:
 * Painting Transforms
 """
 
-from rising.transforms._affine import BaseAffine, Resize, Rotate, Scale, Translate, _Affine, _StackedAffine
 from rising.transforms.abstract import (
     BaseTransform,
     BaseTransformMixin,
@@ -27,6 +26,7 @@ from rising.transforms.abstract import (
     PerSampleTransformMixin,
     _AbstractTransform,
 )
+from rising.transforms.affine import BaseAffine, Resize, Rotate, Scale, Translate, _Affine, _StackedAffine
 from rising.transforms.channel import ArgMax, OneHot
 from rising.transforms.compose import Compose, DropoutCompose, OneOf
 from rising.transforms.crop import CenterCrop, RandomCrop
