@@ -6,7 +6,7 @@ from rising.utils import check_scalar
 
 __all__ = ["mirror", "rot90", "resize_native"]
 
-from rising.utils.enum import FInterpolation
+from rising.constants import FInterpolation
 
 
 def mirror(

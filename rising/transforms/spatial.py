@@ -10,7 +10,7 @@ from rising.transforms.functional import mirror, resize_native, rot90
 
 __all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "SizeStepScheduler"]
 
-from rising.utils.enum import FInterpolation
+from rising.constants import FInterpolation
 
 scheduler_type = Callable[[int], Union[int, Sequence[int]]]
 

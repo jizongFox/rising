@@ -6,10 +6,10 @@ import SimpleITK as sitk
 import torch
 from matplotlib import pyplot as plt
 
+from rising.constants import FInterpolation
 from rising.loading import DataLoader
 from rising.random import DiscreteParameter, UniformParameter
 from rising.transforms import Mirror, ProgressiveResize, ResizeNative, Rot90, SizeStepScheduler, Zoom
-from rising.utils.enum import FInterpolation
 from tests.realtime_viewer import multi_slice_viewer_debug
 
 
