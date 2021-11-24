@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from rising.random import ContinuousParameter, UniformParameter
-from rising.transforms import AbstractTransform
+from rising.transforms import _AbstractTransform
 from rising.transforms.sitk import _ITKTransform
 from rising.utils import check_scalar
 
@@ -65,14 +65,14 @@ class _TransformWrapper(torch.nn.Module):
         return self.trafo(*args, **kwargs)
 
 
-class Compose(AbstractTransform):
+class Compose(_AbstractTransform):
     """
     Compose multiple transforms
     """
 
     def __init__(
         self,
-        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
+        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
         shuffle: bool = False,
         transform_call: Callable[[Any, Callable], Any] = dict_call,
     ):
@@ -112,10 +112,13 @@ class Compose(AbstractTransform):
         assert len(self.transforms) == len(self.transform_order)
         data = seq_like if seq_like else map_like
 
+        seed = int(torch.randint(0, int(1e6), (1,)))
+        torch.manual_seed(seed)
         if self.shuffle:
             self.shuffle_transform()
 
         for idx in self.transform_order:
+            torch.manual_seed(seed + idx)
             data = self.transform_call(data, self.transforms[idx])
         return data
 
@@ -130,7 +133,7 @@ class Compose(AbstractTransform):
         return self._transforms
 
     @transforms.setter
-    def transforms(self, transforms: Union[AbstractTransform, Sequence[AbstractTransform]]):
+    def transforms(self, transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]]):
         """
         Transforms setter
 
@@ -178,7 +181,7 @@ class Compose(AbstractTransform):
         """
         tensor_transform_indicator = []
         for i, trans in enumerate(self.transforms):
-            assert isinstance(trans, AbstractTransform)
+            assert isinstance(trans, _AbstractTransform)
             if not isinstance(trans, _ITKTransform):
                 tensor_transform_indicator.append(i)
         transform_mapping = {
@@ -194,7 +197,7 @@ class DropoutCompose(Compose):
 
     def __init__(
         self,
-        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
+        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
         dropout: Union[float, Sequence[float]] = 0.5,
         shuffle: bool = False,
         random_sampler: ContinuousParameter = None,
@@ -262,14 +265,14 @@ class DropoutCompose(Compose):
         return data
 
 
-class OneOf(AbstractTransform):
+class OneOf(_AbstractTransform):
     """
     Apply one of the given transforms.
     """
 
     def __init__(
         self,
-        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
+        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
         weights: Optional[Sequence[float]] = None,
         p: float = 1.0,
         transform_call: Callable[[Any, Callable], Any] = dict_call,

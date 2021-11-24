@@ -1,21 +1,38 @@
 from typing import Sequence, Union
 
-from rising.transforms.abstract import BaseTransform, item_or_seq
+import torch
+
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, TYPE_item_seq
 from rising.transforms.functional.pad import pad as _pad
 from rising.utils.mise import ntuple
 
 
-class Pad(BaseTransform):
-    def __init__(self, *, padding_size: item_or_seq[int], mode: str = "constant", pad_value: item_or_seq[float],
-                 keys: Sequence[str] = ("data",), grad: bool = False, **kwargs):
+class Pad(BaseTransformMixin, BaseTransform):
+    def __init__(
+        self,
+        *,
+        pad_size: TYPE_item_seq[int],
+        mode: str = "constant",
+        pad_value: TYPE_item_seq[float],
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
+        **kwargs
+    ):
         """
         padding_size should be the same for all the keys.
         pad_value can be different for different keys
         """
-        super().__init__(_pad, keys=keys, grad=grad, property_names=(), **kwargs)
-        self.padding_size = padding_size
-        self.mode = mode
-        self.pad_value = self._tuple_generator(pad_value)
+        super().__init__(
+            augment_fn=_pad,
+            keys=keys,
+            grad=grad,
+            paired_kw_names=("value", "mode"),
+            augment_fn_names=("pad_size", "mode", "value"),
+            pad_size=pad_size,
+            mode=mode,
+            value=pad_value,
+            **kwargs
+        )
 
     def forward(self, **data) -> dict:
         """
@@ -27,18 +44,18 @@ class Pad(BaseTransform):
         Returns:
             dict: dict with augmented data
         """
-        kwargs = {}
-        for k in self.property_names:
-            kwargs[k] = getattr(self, k)
+        seed = int(torch.randint(0, int(1e16), (1,)))
 
-        kwargs.update(self.kwargs)
+        for _key in self.keys:
+            with self.random_cxm(seed):
+                kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
+                kwargs.update(self.get_pair_kwargs(_key))
+                input_shape = data[_key].shape[2:]
+                pad_size = self.pad_parameters(input_shape, self.pad_size, ndim=(data[_key].dim() - 2))
+                kwargs.update({"pad_size": pad_size})
 
-        for _key, _value in zip(self.keys, self.pad_value):
-            cur_data = data[_key]
-            input_shape = cur_data.shape[2:]
-            pad_size = self.pad_parameters(input_shape, self.padding_size, ndim=cur_data.dim() - 2)
-            data[_key] = self.augment_fn(data[_key], pad_size=pad_size, grid_pad=False, mode=self.mode,
-                                         value=_value)
+                if torch.rand(1).item() < self.p:
+                    data[_key] = self.augment_fn(data[_key], **kwargs)
         return data
 
     @staticmethod

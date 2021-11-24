@@ -1,7 +1,7 @@
-from rising.transforms.abstract import AbstractTransform
+from rising.transforms.abstract import _AbstractTransform
 
 
-def chech_data_preservation(trafo: AbstractTransform, batch: dict, key: str = "data") -> bool:
+def chech_data_preservation(trafo: _AbstractTransform, batch: dict, key: str = "data") -> bool:
     """
     Checks for inplace modification of input data
 

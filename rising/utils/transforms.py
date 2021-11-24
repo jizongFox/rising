@@ -5,17 +5,17 @@ import torch
 from torch import nn
 
 if typing.TYPE_CHECKING:
-    from rising.transforms.abstract import AbstractTransform
+    from rising.transforms.abstract import _AbstractTransform
     from rising.transforms.compose import Compose
 
 
 def iter_transform(
-    transforms: Union["Compose", "AbstractTransform", Sequence["AbstractTransform"], nn.ModuleList]
-) -> Iterable["AbstractTransform"]:
-    from rising.transforms.abstract import AbstractTransform
+    transforms: Union["Compose", "_AbstractTransform", Sequence["_AbstractTransform"], nn.ModuleList]
+) -> Iterable["_AbstractTransform"]:
+    from rising.transforms.abstract import _AbstractTransform
     from rising.transforms.compose import Compose
 
-    if isinstance(transforms, AbstractTransform) and not isinstance(transforms, Compose):
+    if isinstance(transforms, _AbstractTransform) and not isinstance(transforms, Compose):
         yield transforms
     elif isinstance(transforms, Compose):
         yield from iter_transform(transforms.transforms)

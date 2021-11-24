@@ -1,34 +1,41 @@
 from abc import abstractmethod
-from typing import Sequence, Union, Dict, Tuple, Optional
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import Tensor
 from torch.nn import functional as F
 
 from rising.random.utils import fix_random_seed_ctx
-from rising.transforms.abstract import AbstractTransform, item_or_seq
+from rising.transforms.abstract import TYPE_item_seq, _AbstractTransform
 from rising.transforms.functional import center_crop, random_crop
 from rising.transforms.kernel import GaussianSmoothing
 from rising.utils.affine import get_batched_eye, matrix_to_homogeneous
 from rising.utils.mise import ntuple
 
-__all__ = ["GridTransform", "StackedGridTransform",
-           "CenterCropGrid", "RandomCropGrid", "ElasticDistortion", "RadialDistortion"]
+__all__ = [
+    "GridTransform",
+    "StackedGridTransform",
+    "CenterCropGrid",
+    "RandomCropGrid",
+    "ElasticDistortion",
+    "RadialDistortion",
+]
 
 
-class GridTransform(AbstractTransform):
+class GridTransform(_AbstractTransform):
     """
     Abstract class for grid transformation.
     """
 
-    def __init__(self,
-                 keys: Sequence[str] = ('data',),
-                 interpolation_mode: item_or_seq[str] = 'bilinear',
-                 padding_mode: item_or_seq[str] = 'zeros',
-                 align_corners: item_or_seq[bool] = False,
-                 grad: bool = False,
-                 **kwargs,
-                 ):
+    def __init__(
+        self,
+        keys: Sequence[str] = ("data",),
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
+        grad: bool = False,
+        **kwargs,
+    ):
         super().__init__(grad=grad)
         self.keys = keys
         self._tuple_generator = ntuple(len(self.keys))
@@ -64,12 +71,7 @@ class GridTransform(AbstractTransform):
         raise NotImplementedError
 
     def create_grid(
-        self,
-        data: Dict[str, Tensor],
-        matrix: Tensor = None,
-        *,
-        device: torch.device,
-        dtype: torch.dtype
+        self, data: Dict[str, Tensor], matrix: Tensor = None, *, device: torch.device, dtype: torch.dtype
     ) -> Dict[str, Tensor]:
         grid = {}
         for key, align_corners in zip(self.keys, self.align_corners):
@@ -96,15 +98,15 @@ class GridTransform(AbstractTransform):
 
 class StackedGridTransform(GridTransform):
     def __init__(self, *transforms: Union[GridTransform, Sequence[GridTransform]]):
-        super().__init__(keys=None, interpolation_mode=None, padding_mode=None,
-                         align_corners=None)
+        super().__init__(keys=None, interpolation_mode=None, padding_mode=None, align_corners=None)
         if isinstance(transforms, (tuple, list)):
             if isinstance(transforms[0], (tuple, list)):
                 transforms = transforms[0]
         self.transforms = transforms
 
-    def create_grid(self, data: Dict[str, Tensor], matrix: Tensor = None, *, device: torch.device,
-                    dtype: torch.dtype) -> Dict[str, Tensor]:
+    def create_grid(
+        self, data: Dict[str, Tensor], matrix: Tensor = None, *, device: torch.device, dtype: torch.dtype
+    ) -> Dict[str, Tensor]:
         return self.transforms[0].create_grid(data=data, matrix=matrix, device=device, dtype=dtype)
 
     def augment_grid(self, grid: Dict[str, Tensor], *, device, dtype) -> Dict[str, Tensor]:
@@ -114,44 +116,56 @@ class StackedGridTransform(GridTransform):
 
 
 class CenterCropGrid(GridTransform):
-    def __init__(self,
-                 *,
-                 size: Union[int, Sequence[int]],
-                 keys: Sequence[str] = ('data',),
-                 interpolation_mode: str = 'bilinear',
-                 padding_mode: str = 'zeros',
-                 align_corners: bool = False,
-                 grad: bool = False,
-                 **kwargs, ):
-        super().__init__(keys=keys, interpolation_mode=interpolation_mode,
-                         padding_mode=padding_mode, align_corners=align_corners,
-                         grad=grad, **kwargs)
+    def __init__(
+        self,
+        *,
+        size: Union[int, Sequence[int]],
+        keys: Sequence[str] = ("data",),
+        interpolation_mode: str = "bilinear",
+        padding_mode: str = "zeros",
+        align_corners: bool = False,
+        grad: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            keys=keys,
+            interpolation_mode=interpolation_mode,
+            padding_mode=padding_mode,
+            align_corners=align_corners,
+            grad=grad,
+            **kwargs,
+        )
         self.size = size
 
     def augment_grid(self, grid: Dict[str, Tensor], **kwargs) -> Dict[str, Tensor]:
-        return {key: center_crop(cur_grid, size=self.size, grid_crop=True)
-                for key, cur_grid in grid.items()}
+        return {key: center_crop(cur_grid, size=self.size, grid_crop=True) for key, cur_grid in grid.items()}
 
 
 class RandomCropGrid(GridTransform):
-    def __init__(self,
-                 size: Union[int, Sequence[int]],
-                 dist: Union[int, Sequence[int]] = 0,
-                 keys: Sequence[str] = ('data',),
-                 interpolation_mode: str = 'bilinear',
-                 padding_mode: str = 'zeros',
-                 align_corners: bool = False,
-                 grad: bool = False,
-                 **kwargs, ):
-        super().__init__(keys=keys, interpolation_mode=interpolation_mode,
-                         padding_mode=padding_mode, align_corners=align_corners,
-                         grad=grad, **kwargs)
+    def __init__(
+        self,
+        size: Union[int, Sequence[int]],
+        dist: Union[int, Sequence[int]] = 0,
+        keys: Sequence[str] = ("data",),
+        interpolation_mode: str = "bilinear",
+        padding_mode: str = "zeros",
+        align_corners: bool = False,
+        grad: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            keys=keys,
+            interpolation_mode=interpolation_mode,
+            padding_mode=padding_mode,
+            align_corners=align_corners,
+            grad=grad,
+            **kwargs,
+        )
         self.size = size
         self.dist = dist
 
     def augment_grid(self, grid: Dict[str, Tensor], **kwargs) -> Dict[str, Tensor]:
-        return {key: random_crop(item, size=self.size, dist=self.dist, grid_crop=True)
-                for key, item in grid.items()}
+        return {key: random_crop(item, size=self.size, dist=self.dist, grid_crop=True) for key, item in grid.items()}
 
 
 class ElasticDistortion(GridTransform):
@@ -159,23 +173,30 @@ class ElasticDistortion(GridTransform):
     ElasticDistortion transformation
     """
 
-    def __init__(self,
-                 std: Union[float, Sequence[float]],
-                 alpha: float,
-                 dim: int = 2,
-                 keys: Sequence[str] = ('data',),
-                 interpolation_mode: item_or_seq[str] = 'bilinear',
-                 padding_mode: item_or_seq[str] = 'zeros',
-                 align_corners: item_or_seq[bool] = False,
-                 grad: bool = False,
-                 per_sample: bool = True,
-                 **kwargs, ):
+    def __init__(
+        self,
+        std: Union[float, Sequence[float]],
+        alpha: float,
+        dim: int = 2,
+        keys: Sequence[str] = ("data",),
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
+        grad: bool = False,
+        per_sample: bool = True,
+        **kwargs,
+    ):
         """
         std: std of the gaussian smooth
         """
-        super().__init__(keys=keys, interpolation_mode=interpolation_mode,
-                         padding_mode=padding_mode, align_corners=align_corners,
-                         grad=grad, **kwargs)
+        super().__init__(
+            keys=keys,
+            interpolation_mode=interpolation_mode,
+            padding_mode=padding_mode,
+            align_corners=align_corners,
+            grad=grad,
+            **kwargs,
+        )
         self.std = std
         self.alpha = alpha
         self.per_sample = per_sample
@@ -201,23 +222,28 @@ class ElasticDistortion(GridTransform):
 
 
 class RadialDistortion(GridTransform):
-    def __init__(self,
-                 scale: Tuple[float, float, float],
-                 keys: Sequence[str] = ('data',),
-                 interpolation_mode: item_or_seq[str] = 'bilinear',
-                 padding_mode: item_or_seq[str] = 'zeros',
-                 align_corners: item_or_seq[bool] = False,
-                 grad: bool = False,
-                 **kwargs, ):
-        super().__init__(keys=keys, interpolation_mode=interpolation_mode,
-                         padding_mode=padding_mode, align_corners=align_corners,
-                         grad=grad, **kwargs)
+    def __init__(
+        self,
+        scale: Tuple[float, float, float],
+        keys: Sequence[str] = ("data",),
+        interpolation_mode: TYPE_item_seq[str] = "bilinear",
+        padding_mode: TYPE_item_seq[str] = "zeros",
+        align_corners: TYPE_item_seq[bool] = False,
+        grad: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            keys=keys,
+            interpolation_mode=interpolation_mode,
+            padding_mode=padding_mode,
+            align_corners=align_corners,
+            grad=grad,
+            **kwargs,
+        )
         self.scale = scale
 
     def augment_grid(self, grid: Dict[Tuple, Tensor], **kwargs) -> Dict[Tuple, Tensor]:
-        new_grid = {
-            key: radial_distortion_grid(cur_grid, scale=self.scale) for key, cur_grid in grid.items()
-        }
+        new_grid = {key: radial_distortion_grid(cur_grid, scale=self.scale) for key, cur_grid in grid.items()}
         return new_grid
 
 
