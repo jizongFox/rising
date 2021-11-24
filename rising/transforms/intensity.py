@@ -481,7 +481,7 @@ class RicianNoiseTransform(BaseTransformMixin, BaseTransform):
         keys: Sequence[str],
         grad: bool,
         std: Union[float, AbstractParameter],
-        p=1,
+        p: float = 1,
     ):
         """Adds rician noise with the given std.
         The Noise of MRI data tends to have a rician distribution: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2254141/
