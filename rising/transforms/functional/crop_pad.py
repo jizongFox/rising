@@ -17,7 +17,7 @@ def pad_random_crop(
 
     from rising.transforms import Pad
 
-    data = Pad(pad_size=[x + y for x, y in zip(size, pad_size)], pad_value=pad_value, keys="data")(data=data)["data"]
+    data = Pad(pad_size=[x + y for x, y in zip(size, pad_size)], pad_value=pad_value, keys=("data",))(data=data)["data"]
     return random_crop(
         data,
         size=size,

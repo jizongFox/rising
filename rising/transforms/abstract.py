@@ -303,6 +303,7 @@ class BaseTransformMixin(_BaseMixin):
 
     @property
     def random_cxm(self):
+        """random seed control context manager, if self.seeded."""
         return fix_seed_cxm if self.seeded else nullcxm
 
 

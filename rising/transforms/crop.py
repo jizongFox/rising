@@ -4,7 +4,7 @@ from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSam
 from rising.transforms.functional.crop import center_crop, random_crop
 from rising.transforms.functional.crop_pad import pad_random_crop
 
-__all__ = ["CenterCrop", "RandomCrop"]
+__all__ = ["CenterCrop", "RandomCrop", "PadRandomCrop"]
 
 
 class CenterCrop(BaseTransformMixin, BaseTransform):

@@ -410,8 +410,9 @@ class BaseAffine(_Affine, BaseTransformMixin):
             align_corners=align_corners,
             reverse_order=reverse_order,
             per_sample=per_sample,
-            p=p,
         )
+        BaseTransformMixin.__init__(self, seeded=True, p=p)
+        self.p = p
         self.register_sampler("scale", scale)
         self.register_sampler("rotation", rotation)
         self.register_sampler("translation", translation)
