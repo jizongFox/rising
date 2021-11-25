@@ -53,6 +53,7 @@ from rising.transforms.intensity import (
     RandomAddValue,
     RandomBezierTransform,
     RandomScaleValue,
+    RicianNoiseTransform,
 )
 from rising.transforms.kernel import GaussianSmoothing, KernelTransform
 from rising.transforms.pad import Pad

@@ -1,3 +1,4 @@
+import torch
 from tqdm import tqdm
 from unet_3d import UNet
 
@@ -15,15 +16,17 @@ seq_tra_augment = transforms.Compose(
 )
 
 batch_augment = transforms.Compose(
-    # transforms.ToDtype(keys=("image", "label"), dtype=torch.half),
+    transforms.ToDtype(keys=("image", "label"), dtype=torch.half),
     # transforms.ToDevice(keys=("image", "label"), device=torch.device("cuda")),
     transforms.GammaCorrection(gamma=UniformParameter(0.8, 2), keys=("image",)),
+    transforms.RicianNoiseTransform(keys=("image",), std=0.05, keep_range=False),
     transforms.BaseAffine(
-        scale=(1, UniformParameter(0.8, 1.2), UniformParameter(0.9, 1.2)),
-        rotation=(0, UniformParameter(-10, 10), UniformParameter(-10, 50)),
-        translation=0,
+        scale=(1, UniformParameter(0.5, 2), UniformParameter(0.9, 1.2)),
+        rotation=(0, UniformParameter(-10, 10), UniformParameter(-10, 10)),
+        translation=(0.1, 0.1, 0.1),
         degree=True,
         p=0.5,
+        per_sample=True,
         interpolation_mode=("bilinear", "nearest"),
         keys=("image", "label"),
     ),
@@ -45,7 +48,7 @@ tra_loader = DataLoader(
     sample_transforms=seq_tra_augment,
     gpu_transforms=batch_augment,
     pseudo_batch_dim=True,
-    num_workers=0,
+    num_workers=4,
 )
 # val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, sample_transforms=seq_val_augment,
 #                         gpu_transforms=batch_augment, pseudo_batch_dim=True, num_workers=4)
@@ -59,5 +62,5 @@ for data in tqdm(tra_loader):
     multi_slice_viewer_debug([*image.squeeze()], *label.squeeze(), block=True, no_contour=True)
     # image, label = image.to(torch.float), label.to(torch.float)
     # prediction = model(image)
-    #
+    # #
     # breakpoint()

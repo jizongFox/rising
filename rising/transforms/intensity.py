@@ -474,19 +474,24 @@ class InvertAmplitude(BaseTransformMixin, BaseTransform):
         )
 
 
-class RicianNoiseTransform(BaseTransformMixin, BaseTransform):
+class RicianNoiseTransform(PerSampleTransformMixin, BaseTransform):
     def __init__(
         self,
         *,
         keys: Sequence[str],
-        grad: bool,
+        grad: bool = False,
         std: Union[float, AbstractParameter],
+        per_sample=True,
         p: float = 1,
+        keep_range: bool = True,
     ):
         """Adds rician noise with the given std.
         The Noise of MRI data tends to have a rician distribution: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2254141/
         Args:
             std :  Union[float, AbstractParameter], samples std of Gaussian distribution used to calculate
+            per_sample: if apply the noise per sample
+            p: the probability of applying the transform.
+            keep_range: if keep range of the image.
         CAREFUL: This transform will modify the value range of your data!
 
         adapted from batchgenerators:
@@ -494,6 +499,12 @@ class RicianNoiseTransform(BaseTransformMixin, BaseTransform):
         """
 
         super().__init__(
-            augment_fn=augment_rician_noise, p=p, keys=keys, grad=grad, augment_fn_names=("std",), per_sample=True
+            augment_fn=augment_rician_noise,
+            p=p,
+            keys=keys,
+            grad=grad,
+            augment_fn_names=("std", "keep_range"),
+            per_sample=per_sample,
         )
         self.register_sampler("std", std)
+        self.keep_range = keep_range

@@ -340,8 +340,17 @@ def random_inversion(
     return out
 
 
-def augment_rician_noise(data, std: float):
-    data = torch.sqrt((data + torch.randn_like(data) * std).pow(2) + (torch.randn_like(data) * std) ** 2) * torch.sign(
-        data
-    )
+def augment_rician_noise(data: torch.Tensor, std: float, keep_range=False):
+    """augment with rician noise
+    Args:
+        data:Tensor input data having dimension of BCHW(D)
+        std: the std of the noise, float
+        keep_range: if keep the image range, default False
+    """
+    min_, max_ = data.min(), data.max()
+    data = torch.sqrt(
+        (data + torch.randn_like(data) * float(std)).pow(2) + (torch.randn_like(data) * float(std)) ** 2
+    ) * torch.sign(data)
+    if keep_range:
+        data = clamp(data, min=min_, max=max_)
     return data

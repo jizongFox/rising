@@ -457,12 +457,14 @@ class BaseAffine(_Affine, BaseTransformMixin):
         return self.matrix
 
     def sample_for_batch_with_prob(self, name: str, batch_size: int, *, default_value: float, seed: int):
+        """
+        sampling batch with self.p and self.per_sample
+        """
         batch_element = self.sample_for_batch(name, batch_size)
         if batch_element is None:
             return batch_element
         with self.random_cxm(seed=int(seed)):
             if not self.per_sample:
-                assert not isinstance(batch_element, (list, tuple))
                 batch_element = batch_element if torch.rand(1) < self.p else default_value
                 return batch_element
             elem_length = len(batch_element[0])
