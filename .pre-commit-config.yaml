@@ -19,6 +19,7 @@ repos:
       - id: pretty-format-json
       - id: check-added-large-files
         exclude: .*\.ipynb
+        args: ['--maxkb=1000']
       - id: check-docstring-first
       - id: detect-private-key
 
