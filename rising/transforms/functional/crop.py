@@ -82,6 +82,7 @@ def random_crop(
 ) -> torch.Tensor:
     """
     Crop random patch/volume from input tensor
+    This function crop images by batch with the same random state.
 
     Parameters
     ----------

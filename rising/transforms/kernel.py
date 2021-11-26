@@ -7,12 +7,12 @@ from torch.nn import functional as F
 from rising.utils import check_scalar
 from rising.utils.mise import ntuple
 
-from .abstract import AbstractTransform, item_or_seq
+from .abstract import TYPE_item_seq, _AbstractTransform
 
 __all__ = ["KernelTransform", "GaussianSmoothing"]
 
 
-class KernelTransform(AbstractTransform):
+class KernelTransform(_AbstractTransform):
     """
     Baseclass for kernel based transformations (kernel is applied to
     each channel individually)
@@ -21,10 +21,10 @@ class KernelTransform(AbstractTransform):
     def __init__(
         self,
         in_channels: int,
-        kernel_size: item_or_seq[int],
+        kernel_size: TYPE_item_seq[int],
         dim: int = 2,
-        stride: item_or_seq[int] = 1,
-        padding: item_or_seq[int] = 0,
+        stride: TYPE_item_seq[int] = 1,
+        padding: TYPE_item_seq[int] = 0,
         padding_mode: str = "zero",
         keys: Sequence[str] = ("data",),
         grad: bool = False,
@@ -129,12 +129,12 @@ class GaussianSmoothing(KernelTransform):
     def __init__(
         self,
         in_channels: int,
-        kernel_size: item_or_seq[int],
-        std: item_or_seq[float],
+        kernel_size: TYPE_item_seq[int],
+        std: TYPE_item_seq[float],
         dim: int = 2,
-        stride: item_or_seq[int] = 1,
-        padding: item_or_seq[int] = 0,
-        padding_mode: item_or_seq[str] = "constant",
+        stride: TYPE_item_seq[int] = 1,
+        padding: TYPE_item_seq[int] = 0,
+        padding_mode: TYPE_item_seq[str] = "constant",
         keys: Sequence[str] = ("data",),
         grad: bool = False,
         **kwargs
@@ -184,7 +184,7 @@ class GaussianSmoothing(KernelTransform):
             kernel *= 1 / (std * math.sqrt(2 * math.pi)) * torch.exp(-(((mgrid - mean) / std) ** 2) / 2)
 
         # Make sure sum of values in gaussian kernel equals 1.
-        kernel = kernel / kernel.sum()
+        kernel /= kernel.sum()
 
         # Reshape to depthwise convolutional weight
         kernel = kernel.view(1, 1, *kernel.size())

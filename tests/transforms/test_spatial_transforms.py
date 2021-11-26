@@ -1,13 +1,16 @@
 import random
 import unittest
 
+import numpy as np
+import SimpleITK as sitk
 import torch
+from matplotlib import pyplot as plt
 
+from rising.constants import FInterpolation
 from rising.loading import DataLoader
-from rising.random import UniformParameter
+from rising.random import DiscreteParameter, UniformParameter
 from rising.transforms import Mirror, ProgressiveResize, ResizeNative, Rot90, SizeStepScheduler, Zoom
-from rising.transforms.functional import resize_native
-from tests.transforms import chech_data_preservation
+from tests.realtime_viewer import multi_slice_viewer_debug
 
 
 class TestSpatialTransforms(unittest.TestCase):
@@ -15,58 +18,79 @@ class TestSpatialTransforms(unittest.TestCase):
         torch.manual_seed(0)
         random.seed(0)
         self.batch_dict = {
-            "data": torch.arange(1, 10).reshape(1, 1, 3, 3).float(),
-            "seg": torch.randint(0, 3, (1, 1, 3, 3)).long(),
-            "label": torch.arange(3),
+            "data": self.load_nii_data("/home/jizong/Workspace/rising/tests/data/patient004_frame01.nii.gz"),
+            "label": self.load_nii_data("/home/jizong/Workspace/rising/tests/data/patient004_frame01_gt.nii.gz"),
         }
 
-    def test_mirror_transform(self):
-        trafo = Mirror((0, 1), p=(1, 1))
-        outp = trafo(**self.batch_dict)
+    def load_nii_data(self, path):
+        return torch.from_numpy(
+            sitk.GetArrayFromImage(sitk.ReadImage(str(path))).astype(np.float32, copy=False)
+        ).unsqueeze(1)
 
-        self.assertTrue(outp["data"][0, 0].allclose(torch.tensor([[9, 8, 7], [6, 5, 4], [3, 2, 1]]).float()))
-        self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
+    def test_mirror_transform(self):
+        trafo = Mirror(dims=DiscreteParameter((0, 1, (0, 1))), p_sample=0.5, keys=("data", "label"))
+        outp = trafo(**self.batch_dict)
+        image1, target1 = self.batch_dict.values()
+        image2, target2 = outp.values()
+        multi_slice_viewer_debug(image1.squeeze(), target1.squeeze())
+        multi_slice_viewer_debug(image2.squeeze(), target2.squeeze(), block=True)
 
     def test_rot90_transform(self):
-        random.seed(0)
-        trafo = Rot90((0, 1), prob=1, num_rots=(1,))
+        trafo = Rot90(dims=[0, 1], num_rots=DiscreteParameter((2,)), p_sample=0.5, keys=("data", "label"))
         outp = trafo(**self.batch_dict)
-        self.assertTrue((outp["data"][0, 0] == torch.tensor([[3, 6, 9], [2, 5, 8], [1, 4, 7]])).all())
-        self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
+        image1, target1 = self.batch_dict.values()
+        image2, target2 = outp.values()
+        multi_slice_viewer_debug(image1.squeeze(), target1.squeeze())
+        multi_slice_viewer_debug(image2.squeeze(), target2.squeeze(), block=True)
 
-        trafo = Rot90((0, 1), prob=0)
-        data_orig = self.batch_dict["data"].clone()
+        trafo = Rot90(dims=[0, 1], num_rots=DiscreteParameter((2,)), p_sample=1, keys=("data", "label"))
         outp = trafo(**self.batch_dict)
-        self.assertTrue((outp["data"] == data_orig).all())
+        image1, target1 = self.batch_dict.values()
+        image2, target2 = outp.values()
+        multi_slice_viewer_debug(image1.squeeze(), target1.squeeze())
+        multi_slice_viewer_debug(image2.squeeze(), target2.squeeze(), block=True)
 
     def test_resize_transform(self):
-        trafo = ResizeNative((2, 2))
+        trafo = ResizeNative(
+            (256, 256),
+            keys=(
+                "data",
+                "label",
+            ),
+            mode=(FInterpolation.bilinear, FInterpolation.nearest),
+            align_corners=(False, None),
+        )
         out = trafo(**self.batch_dict)
-        expected = torch.tensor([[1, 2], [4, 5]])
-        self.assertTrue((out["data"] == expected).all())
+        image1, target1 = self.batch_dict.values()
+        image2, target2 = out.values()
+        multi_slice_viewer_debug(image1.squeeze(), target1.squeeze())
+        multi_slice_viewer_debug(image2.squeeze(), target2.squeeze(), block=True, no_contour=True)
 
     def test_zoom_transform(self):
         _range = (2.0, 3.0)
-        torch.manual_seed(0)
-        scale_factor = UniformParameter(*_range)()
+        # scale_factor = UniformParameter(*_range)()
 
-        trafo = Zoom(scale_factor=UniformParameter(*_range))
-        torch.manual_seed(0)
+        trafo = Zoom(scale_factor=UniformParameter(*_range), keys=("data", "label"))
+
         out = trafo(**self.batch_dict)
-
-        expected = resize_native(self.batch_dict["data"], mode="nearest", scale_factor=scale_factor)
-        self.assertTrue((out["data"] == expected).all())
+        image1, target1 = self.batch_dict.values()
+        image2, target2 = out.values()
+        multi_slice_viewer_debug(image1.squeeze(), target1.squeeze())
+        multi_slice_viewer_debug(image2.squeeze(), target2.squeeze(), block=True, no_contour=True)
 
     def test_progressive_resize(self):
+        image1, target1 = self.batch_dict.values()
+        multi_slice_viewer_debug(image1.squeeze(), target1.squeeze())
+
         sizes = [1, 3, 6]
-        scheduler = SizeStepScheduler([1, 2], [1, 3, 6])
-        trafo = ProgressiveResize(scheduler)
+        scheduler = SizeStepScheduler([1, 2], [112, 224, 336])
+        trafo = ProgressiveResize(scheduler, keys=("data", "label"))
         for i in range(3):
             outp = trafo(**self.batch_dict)
-            self.assertTrue(all([s == sizes[i] for s in outp["data"].shape[2:]]))
+            image2, target2 = outp.values()
+            multi_slice_viewer_debug(image2.squeeze(), target2.squeeze(), block=False, no_contour=True)
 
-        trafo.reset_step()
-        self.assertEqual(trafo.step, 0)
+        plt.show()
 
     def test_size_step_scheduler(self):
         scheduler = SizeStepScheduler([10, 20], [16, 32, 64])
@@ -90,9 +114,9 @@ class TestSpatialTransforms(unittest.TestCase):
 
         data_shape = [tuple(i["data"].shape) for i in loader]
 
-        self.assertIn((1, 1, 1, 1, 1), data_shape)
-        # self.assertIn((1, 1, 3, 3, 3), data_shape)
-        self.assertIn((1, 1, 6, 6, 6), data_shape)
+        self.assertIn((1, 10, 1, 1, 1), data_shape)
+        self.assertIn((1, 10, 3, 3, 3), data_shape)
+        self.assertIn((1, 10, 6, 6, 6), data_shape)
 
 
 if __name__ == "__main__":

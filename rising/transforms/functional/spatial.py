@@ -6,13 +6,18 @@ from rising.utils import check_scalar
 
 __all__ = ["mirror", "rot90", "resize_native"]
 
+from rising.constants import FInterpolation
 
-def mirror(data: torch.Tensor, dims: Union[int, Sequence[int]]) -> torch.Tensor:
+
+def mirror(
+    data: torch.Tensor,
+    dims: Union[int, Sequence[int]],
+) -> torch.Tensor:
     """
     Mirror data at dims
 
     Args:
-        data: input data
+        data: input data [B,C,H,W,D]
         dims: dimensions to mirror
 
     Returns:
@@ -30,7 +35,7 @@ def rot90(data: torch.Tensor, k: int, dims: Union[int, Sequence[int]]):
     Rotate 90 degrees around dims
 
     Args:
-        data: input data
+        data: input data [B,C,H,W,D]
         k: number of times to rotate
         dims: dimensions to mirror
 
@@ -77,7 +82,7 @@ def resize_native(
         # pytorch internally checks for an iterable. Single value tensors are still iterable
         scale_factor = float(scale_factor)
     out = torch.nn.functional.interpolate(
-        data, size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners
+        data, size=size, scale_factor=scale_factor, mode=FInterpolation(mode).value, align_corners=align_corners
     )
 
     if preserve_range:

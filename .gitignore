@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+notebooks/medical_seg/data/
 *.py[cod]
 *$py.class
 *.vscode

@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+import SimpleITK as sitk
 import torch
 
 from rising.random import UniformParameter
@@ -8,6 +10,18 @@ from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 
 
 class AffineTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        torch.manual_seed(0)
+        self.batch_dict = {
+            "data": self.load_nii_data("/home/jizong/Workspace/rising/tests/data/patient004_frame01.nii.gz"),
+            "label": self.load_nii_data("/home/jizong/Workspace/rising/tests/data/patient004_frame01_gt.nii.gz"),
+        }
+
+    def load_nii_data(self, path):
+        return torch.from_numpy(
+            sitk.GetArrayFromImage(sitk.ReadImage(str(path))).astype(np.float32, copy=False)
+        ).unsqueeze(1)
+
     def test_affine(self):
         matrix = torch.tensor([[4.0, 0.0, 0.0], [0.0, 5.0, 0.0]])
         image_batch = torch.zeros(10, 3, 25, 25, dtype=torch.float, device="cpu")
@@ -161,16 +175,34 @@ class AffineTestCase(unittest.TestCase):
         self.assertTrue(expected.allclose(expected))
 
     def test_affine_prob(self):
-        image = torch.randn(13, 1, 224, 224, 224)
-        prob = torch.randn(13, 1, 224, 224, 224)
+        image = torch.randn(13, 1, 224, 224)
+        prob = torch.randn(13, 1, 224, 224)
         translate = BaseAffine(
-            rotation=UniformParameter(-10, 10),
+            rotation=(UniformParameter(-10, 10)),
             degree=True,
-            scale=UniformParameter(-10, 10),
+            scale=(UniformParameter(-10, 10), UniformParameter(-10, 10)),
             keys=("data", "prob"),
         )
         image_, prob_ = translate(data=image, prob=prob).values()
-        pass
+
+    def test_again(self):
+        random_affine = BaseAffine(
+            rotation=UniformParameter(-50, 50),
+            degree=True,
+            scale=(UniformParameter(0.7, 0.95), UniformParameter(2, 2.8)),
+            translation=UniformParameter(-0.2, 0.2),
+            p=1,
+            keys=("data", "label"),
+            interpolation_mode=("bilinear", "nearest"),
+        )
+        image, label = self.batch_dict.values()
+        for i in range(100):
+            output_image, output_label = random_affine(**self.batch_dict).values()
+            from tests.realtime_viewer import multi_slice_viewer_debug
+
+            multi_slice_viewer_debug(
+                [image.squeeze(), output_image.squeeze()], label.squeeze(), output_label.squeeze(), block=True
+            )
 
 
 if __name__ == "__main__":

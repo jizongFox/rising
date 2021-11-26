@@ -8,6 +8,16 @@ from rising.utils.mise import ntuple
 
 
 def pad(data: Tensor, pad_size: Union[int, Sequence[int]], grid_pad=False, mode="constant", value: float = 0.0):
+    """
+    Args:
+        data: input data with size [B,C,H,W,(D)]
+        pad_size: int or seq of int. the dimension to pad, following functional.pad function convention, where
+                order is inversed.
+        grid_pad: bool must be False, True is not implemented.
+        mode: str, padding mode, following functional.pad
+        ``'constant'``, ``'reflect'``, ``'replicate'`` or ``'circular'``
+        value: float, padding value.
+    """
     n_dim = data.dim() - 2
     # padding parameters
     if check_scalar(pad_size):
@@ -29,21 +39,3 @@ def pad(data: Tensor, pad_size: Union[int, Sequence[int]], grid_pad=False, mode=
         return F.pad(data, pad=pad_size, mode=mode, value=value)
     else:
         raise NotImplementedError(grid_pad)
-
-
-#
-# if __name__ == '__main__':
-#     from PIL import Image
-#     import requests
-#     from io import BytesIO
-#     import numpy as np
-#     import torch
-#     from torch.nn import functional as F
-#
-#     url = "https://miro.medium.com/max/1400/0*1F2u74JQYI8sUuYg"
-#     response = requests.get(url)
-#     img = Image.open(BytesIO(response.content))
-#     np_img = np.asarray(img).astype(np.float32)
-#     t_img = torch.from_numpy(np_img).permute(2, 0, 1)
-#     t_img = t_img[None, ...]
-#     t_img_pad = F.pad(t_img, pad=(200, 200, 400, 400), mode="replicate")

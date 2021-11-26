@@ -1,7 +1,6 @@
 import random
 import unittest
 from math import isclose
-from unittest.mock import Mock, call
 
 import torch
 
@@ -11,15 +10,13 @@ from rising.transforms import (
     ExponentialNoise,
     GammaCorrection,
     GaussianNoise,
-    Noise,
     NormMeanStd,
     NormMinMax,
+    NormPercentile,
     NormRange,
     NormZeroMeanUnitStd,
     RandomAddValue,
     RandomScaleValue,
-    RandomValuePerChannel,
-    NormPercentile
 )
 from tests.transforms import chech_data_preservation
 
@@ -55,6 +52,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_norm_percentile_transform(self):
         trafo = NormPercentile(0.001, 0.99, per_channel=False)
+        # out = trafo(**self.batch_dict)
         self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
 
         trafo = NormPercentile(0.001, 0.99, per_channel=True)
@@ -62,7 +60,8 @@ class MyTestCase(unittest.TestCase):
 
         outp = trafo(**self.batch_dict)
         self.assertTrue(
-            isclose(outp["data"].min().item(), torch.quantile(self.batch_dict["data"], 0.001), abs_tol=1e-6))
+            isclose(outp["data"].min().item(), torch.quantile(self.batch_dict["data"], 0.001), abs_tol=1e-6)
+        )
         self.assertTrue(isclose(outp["data"].max().item(), torch.quantile(self.batch_dict["data"], 0.99), abs_tol=1e-6))
 
     def test_norm_min_max_transform(self):
@@ -100,11 +99,6 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(isclose(outp["data"].mean().item(), 0.0, abs_tol=1e-6))
         self.assertTrue(isclose(outp["data"].std().item(), 1.0, abs_tol=1e-6))
 
-    def test_noise_transform(self):
-        trafo = Noise("normal", mean=75, std=1)
-        self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
-        self.check_noise_distance(trafo)
-
     def test_expoential_noise_transform(self):
         trafo = ExponentialNoise(lambd=0.0001)
         self.assertTrue(chech_data_preservation(trafo, self.batch_dict))
@@ -119,25 +113,6 @@ class MyTestCase(unittest.TestCase):
         outp = trafo(**self.batch_dict)
         comp_diff = (outp["data"] - self.batch_dict["data"]).mean().item()
         self.assertTrue(comp_diff > min_diff)
-
-    def test_per_channel_transform_per_channel_true(self):
-        # TODO: check why sometimes an overflow occurs
-        mock = Mock(return_value=0)
-
-        def augment_fn(inp, *args, **kwargs):
-            return mock(inp)
-
-        trafo = RandomValuePerChannel(
-            augment_fn, random_sampler=DiscreteParameter((1,)), per_channel=True, keys=("label",)
-        )
-        self.batch_dict["label"] = self.batch_dict["label"][None]
-        output = trafo(**self.batch_dict)
-        calls = [
-            call(torch.tensor([0])),
-            call(torch.tensor([1])),
-            call(torch.tensor([2])),
-        ]
-        mock.assert_has_calls(calls)
 
     def test_random_add_value(self):
         trafo = RandomAddValue(DiscreteParameter((2,)))
