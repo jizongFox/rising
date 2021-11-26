@@ -92,7 +92,7 @@ def multi_slice_viewer_debug(
             else:
                 ax.con.remove()
                 ax.con = ax.imshow(ax.gt_volume[ax.index], alpha=alpha, cmap="rainbow")
-        ax.set_title(f"plane = {ax.index}")
+        # ax.set_title(f"plane = {ax.index}")
 
     def next_slice(ax):
         img_volume = ax.img_volume
@@ -107,7 +107,7 @@ def multi_slice_viewer_debug(
             else:
                 ax.con.remove()
                 ax.con = ax.imshow(ax.gt_volume[ax.index], alpha=alpha, cmap="rainbow")
-        ax.set_title(f"plane = {ax.index}")
+        # ax.set_title(f"plane = {ax.index}")
 
     try:
         import matplotlib
@@ -147,7 +147,7 @@ def multi_slice_viewer_debug(
             except Exception as e:
                 pass
             ax.axis("off")
-            ax.set_title(f"plane = {ax.index}")
+            # ax.set_title(f"plane = {ax.index}")
 
     fig.canvas.mpl_connect("key_press_event", process_key)
     fig.canvas.mpl_connect("scroll_event", process_mouse_wheel)

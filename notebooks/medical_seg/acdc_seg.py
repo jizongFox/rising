@@ -25,7 +25,7 @@ batch_augment = transforms.Compose(
     transforms.GammaCorrection(gamma=UniformParameter(0.8, 2), keys=("image",)),
     transforms.RicianNoiseTransform(keys=("image",), std=0.05, keep_range=False),
     transforms.BaseAffine(
-        scale=(1, UniformParameter(0.5, 2), UniformParameter(0.9, 1.2)),
+        scale=(1, UniformParameter(0.5, 4), UniformParameter(0.9, 1.2)),
         rotation=(0, UniformParameter(-10, 10), UniformParameter(-10, 10)),
         degree=True,
         p=1,
@@ -56,6 +56,9 @@ tra_loader = DataLoader(
 
 for data in tqdm(tra_loader):
     image, label = data["image"], data["label"]
+    from tests.realtime_viewer import multi_slice_viewer_debug
+
+    multi_slice_viewer_debug([*image.squeeze()], *label.squeeze(), block=True, no_contour=True)
     # from tests.realtime_viewer import multi_slice_viewer_debug
     #
     # for img, lab in zip(image, label):
