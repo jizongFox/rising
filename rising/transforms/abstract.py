@@ -1,5 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, final
+
+try:
+    from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, final
+except ImportError:
+    from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
+    from typing_extensions import final
 
 import torch
 from torch import nn
