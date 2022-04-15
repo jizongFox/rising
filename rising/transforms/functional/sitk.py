@@ -50,5 +50,5 @@ def itk_clip(image: sitk.Image, low: int, high: int) -> sitk.Image:
 
 
 def itk2tensor(image: sitk.Image, *, dtype=torch.float):
-    np_array = sitk.GetArrayFromImage(image).astype(np.float32, copy=False)
+    np_array = sitk.GetArrayFromImage(image).astype(float, copy=False)
     return torch.from_numpy(np_array).to(dtype)[None, ...]

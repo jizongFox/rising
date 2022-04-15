@@ -23,8 +23,8 @@ class ACDCDataset(Dataset):
     def __getitem__(self, index) -> T_co:
         image_path = str(self._root / self.images[index])
         gt_path = image_path.replace(".nii.gz", "_gt.nii.gz")
-        image = sitk.GetArrayFromImage(sitk.ReadImage(image_path)).astype(np.float32, copy=False)[None, ...]
-        gt = sitk.GetArrayFromImage(sitk.ReadImage(gt_path)).astype(np.float32, copy=False)[None, ...]
+        image = sitk.GetArrayFromImage(sitk.ReadImage(image_path)).astype(float, copy=False)[None, ...]
+        gt = sitk.GetArrayFromImage(sitk.ReadImage(gt_path)).astype(float, copy=False)[None, ...]
         return {"image": torch.from_numpy(image), "label": torch.from_numpy(gt)}
 
     def __len__(self):

@@ -19,7 +19,7 @@ class AffineTestCase(unittest.TestCase):
 
     def load_nii_data(self, path):
         return torch.from_numpy(
-            sitk.GetArrayFromImage(sitk.ReadImage(str(path))).astype(np.float32, copy=False)
+            sitk.GetArrayFromImage(sitk.ReadImage(str(path))).astype(float, copy=False)
         ).unsqueeze(1)
 
     def test_affine(self):

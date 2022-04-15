@@ -29,8 +29,8 @@ class SliceViewer(QtGui.QWidget):
             v.setSlice(v.getSlice() + event.delta() / 120)
 
     def initUI(self):
-        image1 = np.random.uniform(-0.5, 255.0, (100, 100, 100)).astype(np.float32)
-        image2 = np.random.uniform(-100.0, 255.0, (100, 100, 100)).astype(np.float32)
+        image1 = np.random.uniform(-0.5, 255.0, (100, 100, 100)).astype(float)
+        image2 = np.random.uniform(-100.0, 255.0, (100, 100, 100)).astype(float)
 
         self.imageViewer = ImageSlicingWidget()
         self.imageViewer2 = ImageSlicingWidget()
