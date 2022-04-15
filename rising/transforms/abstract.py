@@ -12,20 +12,20 @@ from torch import nn
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import fix_seed_cxm, ntuple, nullcxm
 
-T = TypeVar("T")
-TYPE_item_seq = Union[T, Sequence[T]]
-
-augment_callable = Callable[..., Any]
-augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
-
 __all__ = [
     "_AbstractTransform",
-    "TYPE_item_seq",
+    "ItemSeq",
     "BaseTransform",
     "PerChannelTransformMixin",
     "PerSampleTransformMixin",
     "BaseTransformMixin",
 ]
+
+T = TypeVar("T")
+ItemSeq = Union[T, Sequence[T]]
+
+augment_callable = Callable[..., Any]
+augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
 
 class _AbstractTransform(nn.Module):
@@ -232,7 +232,7 @@ class BaseTransform(_AbstractTransform, ABC):
         else:
             return elem  # either a single scalar value or None
 
-    def register_paired_attribute(self, name: str, value: TYPE_item_seq[T]):
+    def register_paired_attribute(self, name: str, value: ItemSeq[T]):
         if name in self._paired_kw_names:
             raise ValueError(f"{name} has been registered in self._pair_kwarg_names")
         if name not in self._augment_fn_names:

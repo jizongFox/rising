@@ -6,7 +6,7 @@ from torch import Tensor
 from torch.nn import functional as F
 
 from rising.random.utils import fix_random_seed_ctx
-from rising.transforms.abstract import TYPE_item_seq, _AbstractTransform
+from rising.transforms.abstract import ItemSeq, _AbstractTransform
 from rising.transforms.functional import center_crop, random_crop
 from rising.transforms.kernel import GaussianSmoothing
 from rising.utils.affine import get_batched_eye, matrix_to_homogeneous
@@ -30,9 +30,9 @@ class GridTransform(_AbstractTransform):
     def __init__(
         self,
         keys: Sequence[str] = ("data",),
-        interpolation_mode: TYPE_item_seq[str] = "bilinear",
-        padding_mode: TYPE_item_seq[str] = "zeros",
-        align_corners: TYPE_item_seq[bool] = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         grad: bool = False,
         **kwargs,
     ):
@@ -179,9 +179,9 @@ class ElasticDistortion(GridTransform):
         alpha: float,
         dim: int = 2,
         keys: Sequence[str] = ("data",),
-        interpolation_mode: TYPE_item_seq[str] = "bilinear",
-        padding_mode: TYPE_item_seq[str] = "zeros",
-        align_corners: TYPE_item_seq[bool] = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         grad: bool = False,
         per_sample: bool = True,
         **kwargs,
@@ -226,9 +226,9 @@ class RadialDistortion(GridTransform):
         self,
         scale: Tuple[float, float, float],
         keys: Sequence[str] = ("data",),
-        interpolation_mode: TYPE_item_seq[str] = "bilinear",
-        padding_mode: TYPE_item_seq[str] = "zeros",
-        align_corners: TYPE_item_seq[bool] = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         grad: bool = False,
         **kwargs,
     ):

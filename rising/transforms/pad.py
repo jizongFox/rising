@@ -2,7 +2,7 @@ from typing import Sequence, Union
 
 import torch
 
-from rising.transforms.abstract import BaseTransform, BaseTransformMixin, TYPE_item_seq
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, ItemSeq
 from rising.transforms.functional.pad import pad as _pad
 from rising.utils.mise import ntuple
 
@@ -11,9 +11,9 @@ class Pad(BaseTransformMixin, BaseTransform):
     def __init__(
         self,
         *,
-        pad_size: TYPE_item_seq[int],
+        pad_size: ItemSeq[int],
         mode: str = "constant",
-        pad_value: TYPE_item_seq[float],
+        pad_value: ItemSeq[float],
         keys: Sequence[str] = ("data",),
         grad: bool = False,
         **kwargs
