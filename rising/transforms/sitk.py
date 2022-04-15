@@ -70,7 +70,7 @@ class SITKWindows(_ITKTransform, BaseTransform):
     """
 
     def __init__(self, low: IntNumType, high: IntNumType, *, keys: Sequence[str] = ("data",), **kwargs):
-        super().__init__(itk_clip, keys=keys, grad=False, property_names=("low", "high"), low=low, high=high, **kwargs)
+        super().__init__(augment_fn=itk_clip, keys=keys, grad=False, property_names=("low", "high"), low=low, high=high, **kwargs)
 
     def forward(self, **data) -> dict:
         kwargs = {}
@@ -104,7 +104,7 @@ class SITK2Tensor(_ITKTransform, BaseTransform):
             dtype: tensor's dtype
             insert_dim: type: int, if you need to expand the tensor given specific dimension, default None,
         """
-        super().__init__(itk2tensor, keys=keys, grad=grad, **kwargs)
+        super().__init__(augment_fn=itk2tensor, keys=keys, grad=grad, **kwargs)
         self.dtype = self.tuple_generator(dtype)
         self.insert_dim = insert_dim
 
