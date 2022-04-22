@@ -9,6 +9,9 @@ import numpy as np
 import torch
 from torch import Tensor
 from torch import multiprocessing as mp
+from torch import nn
+
+from rising.random.abstract import AbstractParameter
 
 T = t.TypeVar("T")
 
@@ -19,6 +22,8 @@ nullcxm = nullcontext
 
 def ntuple(n: int) -> t.Callable[[t.Union[T, t.Sequence[T]]], t.Sequence[T]]:
     def parse(x: t.Union[T, t.Sequence[T]]) -> t.Sequence[T]:
+        if isinstance(x, AbstractParameter):
+            return nn.ModuleList([x])
         if isinstance(x, (Tensor, np.ndarray, str)):
             return tuple(repeat(x, n))
         if isinstance(x, collections.abc.Iterable):
