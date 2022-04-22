@@ -199,7 +199,7 @@ class DataLoader(_DataLoader):
             keys = get_keys_from_transforms(gpu_transforms)
             to_gpu_trafo = ToDevice(device=device, non_blocking=pin_memory, keys=keys)
 
-            gpu_transforms = Compose(to_gpu_trafo, gpu_transforms)
+            gpu_transforms = Compose(to_gpu_trafo, gpu_transforms, transform_call=default_transform_call)
             gpu_transforms = gpu_transforms.to(device)
 
             # check the dtype from the gpu compose
