@@ -10,8 +10,8 @@ from rising.constants import FInterpolation
 
 
 def mirror(
-    data: torch.Tensor,
-    dims: Union[int, Sequence[int]],
+        data: torch.Tensor,
+        dims: Union[int, Sequence[int]],
 ) -> torch.Tensor:
     """
     Mirror data at dims
@@ -42,17 +42,18 @@ def rot90(data: torch.Tensor, k: int, dims: Union[int, Sequence[int]]):
     Returns:
         torch.Tensor: tensor with mirrored dimensions
     """
+    dims = [dims, ] if check_scalar(dims) else dims  # type: ignore
     dims = [int(d + 2) for d in dims]
     return torch.rot90(data, int(k), dims)
 
 
 def resize_native(
-    data: torch.Tensor,
-    size: Optional[Union[int, Sequence[int]]] = None,
-    scale_factor: Optional[Union[float, Sequence[float]]] = None,
-    mode: str = "nearest",
-    align_corners: Optional[bool] = None,
-    preserve_range: bool = False,
+        data: torch.Tensor,
+        size: Optional[Union[int, Sequence[int]]] = None,
+        scale_factor: Optional[Union[float, Sequence[float]]] = None,
+        mode: str = "nearest",
+        align_corners: Optional[bool] = None,
+        preserve_range: bool = False,
 ):
     """
     Down/up-sample sample to either the given :attr:`size` or the given
@@ -81,6 +82,9 @@ def resize_native(
     if check_scalar(scale_factor):
         # pytorch internally checks for an iterable. Single value tensors are still iterable
         scale_factor = float(scale_factor)
+    elif scale_factor is not None:
+        assert len(scale_factor) == len(data.shape) - 2, "scale_factor must be scalar or have same length as data"
+        scale_factor = [float(f) for f in scale_factor]
     out = torch.nn.functional.interpolate(
         data, size=size, scale_factor=scale_factor, mode=FInterpolation(mode).value, align_corners=align_corners
     )

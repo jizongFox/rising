@@ -4,28 +4,29 @@ from typing import Callable, Optional, Sequence, Union
 
 from torch.multiprocessing import Value
 
+from rising.constants import FInterpolation
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSampleTransformMixin, ItemSeq
-from rising.transforms.functional import mirror, resize_native, rot90
-
-__all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "SizeStepScheduler"]
-
-from rising.constants import FInterpolation
+from rising.transforms.functional import mirror, resize_native, rot90, center_crop
+from rising.utils import check_scalar
 
 scheduler_type = Callable[[int], Union[int, Sequence[int]]]
+
+__all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "SizeStepScheduler",
+           "ResizeNativeCentreCrop"]
 
 
 class Mirror(PerSampleTransformMixin, BaseTransform):
     """Random mirror transform"""
 
     def __init__(
-        self,
-        *,
-        dims=ItemSeq[Union[int, DiscreteParameter]],
-        p_sample: float = 0.5,
-        keys: Sequence[str] = ("data",),
-        grad: bool = False,
-        per_sample: bool = True,
+            self,
+            *,
+            dims: ItemSeq[Union[int, DiscreteParameter]],
+            p_sample: float = 0.5,
+            keys: Sequence[str] = ("data",),
+            grad: bool = False,
+            per_sample: bool = True,
     ):
         """
         Args:
@@ -50,13 +51,13 @@ class Rot90(PerSampleTransformMixin, BaseTransform):
     """Rotate 90 degree around dims"""
 
     def __init__(
-        self,
-        dims: ItemSeq[Union[Sequence[int], DiscreteParameter]],
-        keys: Sequence[str] = ("data",),
-        num_rots: DiscreteParameter = DiscreteParameter((0, 1, 2, 3)),
-        p_sample: float = 0.5,
-        per_sample: bool = True,
-        grad: bool = False,
+            self,
+            dims: ItemSeq[Union[Sequence[int], DiscreteParameter]],
+            keys: Sequence[str] = ("data",),
+            num_rots: DiscreteParameter = DiscreteParameter((0, 1, 2, 3)),
+            p_sample: float = 0.5,
+            per_sample: bool = True,
+            grad: bool = False,
     ):
         """
         Args:
@@ -64,9 +65,7 @@ class Rot90(PerSampleTransformMixin, BaseTransform):
                 provided, 2 dimensions are randomly chosen at each call
             keys: keys which should be rotated
             num_rots: possible values for number of rotations
-            prob: probability for rotation
             grad: enable gradient computation inside transformation
-            kwargs: keyword arguments passed to superclass
 
         See Also:
             :func:`torch.Tensor.rot90`
@@ -94,13 +93,13 @@ class ResizeNative(BaseTransformMixin, BaseTransform):
     """Resize data to given size"""
 
     def __init__(
-        self,
-        size: Union[int, Sequence[int]],
-        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-        align_corners: ItemSeq[bool] = None,
-        preserve_range: bool = False,
-        keys: Sequence[str] = ("data",),
-        grad: bool = False,
+            self,
+            size: Union[int, Sequence[int]],
+            mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+            align_corners: ItemSeq[bool] = None,
+            preserve_range: bool = False,
+            keys: Sequence[str] = ("data",),
+            grad: bool = False,
     ):
         """
         Args:
@@ -115,7 +114,6 @@ class ResizeNative(BaseTransformMixin, BaseTransform):
             preserve_range: output tensor has same range as input tensor
             keys: keys which should be augmented
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to augment_fn
         """
         super().__init__(
             augment_fn=resize_native,
@@ -133,6 +131,53 @@ class ResizeNative(BaseTransformMixin, BaseTransform):
         assert self.p == 1.0
 
 
+class ResizeNativeCentreCrop(ResizeNative):
+
+    def __init__(self, size: Union[int, Sequence[int]], mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+                 align_corners: ItemSeq[bool] = None, preserve_range: bool = False, margin: ItemSeq[int] = 0,
+                 keys: Sequence[str] = ("data",),
+                 grad: bool = False):
+        """
+        This class extends the ResizeNative class to crop the image in the center, useful to exclude the empty borders
+
+        image -> resize with size + margin -> center crop with size
+
+        Args:
+            size: spatial output size (excluding batch size and
+                number of channels)
+            mode: one of ``nearest``, ``linear``, ``bilinear``, ``bicubic``,
+                ``trilinear``, ``area`` (for more inforamtion see
+                :func:`torch.nn.functional.interpolate`) or their sequence, for different keys.
+            align_corners: input and output tensors are aligned by the center \
+                points of their corners pixels, preserving the values at the
+                corner pixels. Input can be sequence, for different keys.
+            preserve_range: output tensor has same range as input tensor
+            keys: keys which should be augmented
+            grad: enable gradient computation inside transformation
+        """
+        if check_scalar(margin) ^ check_scalar(size):
+            raise ValueError("`size` and `margin` must be scalar or sequence of scalars in the same time.")
+        if not check_scalar(margin) and len(margin) != len(size):
+            raise ValueError("`size` and `margin` must have the same length.")
+
+        if check_scalar(margin):
+            resized_size = size + margin
+        else:
+            resized_size = [x + y for x, y in zip(size, margin)]
+
+        super().__init__(size, mode, align_corners, preserve_range, keys, grad)
+        self._resized_size = resized_size
+        self._crop_size = size
+        self._margin = margin
+
+    def forward(self, **data):
+        self.size = self._resized_size
+        data = super().forward(**data)
+        for _key in self.keys:
+            data[_key] = center_crop(data[_key], self._crop_size)
+        return data
+
+
 class Zoom(BaseTransformMixin, BaseTransform):
     """Apply augment_fn to keys. By default the scaling factor is sampled
     from a uniform distribution with the range specified by
@@ -140,13 +185,13 @@ class Zoom(BaseTransformMixin, BaseTransform):
     """
 
     def __init__(
-        self,
-        scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
-        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-        align_corners: ItemSeq[bool] = None,
-        preserve_range: bool = False,
-        keys: Sequence[str] = ("data",),
-        grad: bool = False,
+            self,
+            scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
+            mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+            align_corners: ItemSeq[bool] = None,
+            preserve_range: bool = False,
+            keys: Sequence[str] = ("data",),
+            grad: bool = False,
     ):
         """
         Args:
@@ -163,7 +208,6 @@ class Zoom(BaseTransformMixin, BaseTransform):
             preserve_range: output tensor has same range as input tensor
             keys: keys which should be augmented
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to augment_fn
 
         See Also:
             :func:`random.uniform`, :func:`torch.nn.functional.interpolate`
@@ -188,13 +232,13 @@ class ProgressiveResize(ResizeNative):
     """Resize data to sizes specified by scheduler"""
 
     def __init__(
-        self,
-        scheduler: scheduler_type,
-        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-        align_corners: ItemSeq[Optional[bool]] = None,
-        preserve_range: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
+            self,
+            scheduler: scheduler_type,
+            mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+            align_corners: ItemSeq[Optional[bool]] = None,
+            preserve_range: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
     ):
         """
         Args:
@@ -210,7 +254,6 @@ class ProgressiveResize(ResizeNative):
             preserve_range: output tensor has same range as input tensor
             keys: keys which should be augmented
             grad: enable gradient computation inside transformation
-            **kwargs: keyword arguments passed to augment_fn
 
         Warnings:
             When this transformations is used in combination with
