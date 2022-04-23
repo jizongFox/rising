@@ -29,7 +29,7 @@ from rising.transforms.abstract import (
 from rising.transforms.affine import BaseAffine, Resize, Rotate, Scale, Translate, _Affine, _StackedAffine
 from rising.transforms.channel import ArgMax, OneHot
 from rising.transforms.compose import Compose, DropoutCompose, OneOf
-from rising.transforms.crop import CenterCrop, PadRandomCrop, RandomCrop
+from rising.transforms.crop import CenterCrop, PadRandomCrop, RandomCrop, PadCenterCrop
 from rising.transforms.format import FilterKeys, MapToSeq, PopKeys, RenameKeys, SeqToMap
 from rising.transforms.grid import (
     CenterCropGrid,

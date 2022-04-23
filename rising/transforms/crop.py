@@ -2,9 +2,9 @@ from typing import Sequence, Union
 
 from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSampleTransformMixin
 from rising.transforms.functional.crop import center_crop, random_crop
-from rising.transforms.functional.crop_pad import pad_random_crop
+from rising.transforms.functional.crop_pad import pad_random_crop, pad_center_crop
 
-__all__ = ["CenterCrop", "RandomCrop", "PadRandomCrop"]
+__all__ = ["CenterCrop", "RandomCrop", "PadRandomCrop", "PadCenterCrop"]
 
 
 class CenterCrop(BaseTransformMixin, BaseTransform):
@@ -29,12 +29,12 @@ class RandomCrop(BaseTransformMixin, BaseTransform):
     """
 
     def __init__(
-        self,
-        *,
-        size: Union[int, Sequence],
-        dist: Union[int, Sequence] = 0,
-        keys: Sequence = ("data",),
-        grad: bool = False,
+            self,
+            *,
+            size: Union[int, Sequence],
+            dist: Union[int, Sequence] = 0,
+            keys: Sequence = ("data",),
+            grad: bool = False,
     ):
         """
         Args:
@@ -60,12 +60,12 @@ class PadRandomCrop(PerSampleTransformMixin, BaseTransform):
     """
 
     def __init__(
-        self,
-        size: Union[int, Sequence],
-        pad_size: Union[int, Sequence[int]] = 0,
-        pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
-        keys: Sequence = ("data",),
-        grad: bool = False,
+            self,
+            size: Union[int, Sequence],
+            pad_size: Union[int, Sequence[int]] = 0,
+            pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
+            keys: Sequence = ("data",),
+            grad: bool = False,
     ):
         """
         Args:
@@ -75,6 +75,34 @@ class PadRandomCrop(PerSampleTransformMixin, BaseTransform):
         """
         super(PadRandomCrop, self).__init__(
             augment_fn=pad_random_crop,
+            keys=keys,
+            grad=grad,
+            size=size,
+            pad_size=pad_size,
+            pad_value=pad_value,
+            augment_fn_names=("size", "pad_size", "pad_value"),
+            paired_kw_names=("pad_value",),
+        )
+
+
+class PadCenterCrop(PerSampleTransformMixin, BaseTransform):
+
+    def __init__(
+            self,
+            size: Union[int, Sequence],
+            pad_size: Union[int, Sequence[int]] = 0,
+            pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+    ):
+        """
+        Args:
+            size: random crop size
+            pad_size: int, sequence[int], padding image to size+pad
+            pad_value: int, float or a list of them.  the value to pad
+        """
+        super(PadCenterCrop, self).__init__(
+            augment_fn=pad_center_crop,
             keys=keys,
             grad=grad,
             size=size,
