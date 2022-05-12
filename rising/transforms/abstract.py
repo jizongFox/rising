@@ -274,6 +274,8 @@ if TYPE_CHECKING:
 else:
     _MIXIN_BASE = ABC
 
+tensor_dim_check = True
+
 
 class BaseTransformMixin(_MIXIN_BASE):
     """
@@ -281,7 +283,7 @@ class BaseTransformMixin(_MIXIN_BASE):
     you don't care about per_sample option.
     """
 
-    def __init__(self, *, p: float = 1, tensor_dim_check: bool = False, **kwargs) -> None:
+    def __init__(self, *, p: float = 1, tensor_dim_check: bool = tensor_dim_check, **kwargs) -> None:
         """
         Args:
             p: float: probability of applying augment_fn per batch
@@ -331,7 +333,7 @@ class PerSampleTransformMixin(BaseTransformMixin):
 
     """
 
-    def __init__(self, *, p: float = 1, tensor_dim_check: bool = False, **kwargs):
+    def __init__(self, *, p: float = 1, tensor_dim_check: bool = tensor_dim_check, **kwargs):
         """
         Args:
             p: probability of applying the transform per sample.
@@ -384,7 +386,9 @@ class PerChannelTransformMixin(BaseTransformMixin):
         result in different augmentations per channel and key.
     """
 
-    def __init__(self, *, p: float = 1, per_channel: bool = True, tensor_dim_check: bool = False, **kwargs) -> None:
+    def __init__(
+        self, *, p: float = 1, per_channel: bool = True, tensor_dim_check: bool = tensor_dim_check, **kwargs
+    ) -> None:
         """
         Args:
             p: probability of applying the transform per sample.
@@ -430,18 +434,27 @@ class PerChannelTransformMixin(BaseTransformMixin):
 
 
 class PerSamplePerChannelTransformMixin(BaseTransformMixin):
-    def __init__(self, *, per_channel: bool, p_channel: float = 1, per_sample: bool, p_sample: float = 1, **kwargs):
+    def __init__(
+        self,
+        *,
+        per_channel: bool = True,
+        p_channel: float = 1,
+        per_sample: bool = True,
+        p: float = 1,
+        check_tensor_dim: bool = tensor_dim_check,
+        **kwargs,
+    ) -> None:
         """
         Args:
             per_channel:bool parameter to perform per_channel operation
             kwargs: base parameters
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, p=p, check_tensor_dim=check_tensor_dim)
         self.per_channel = per_channel
         self.p_channel = p_channel
 
         self.per_sample = per_sample
-        self.p_sample = p_sample
+        self.p_sample = p
 
     def forward(self, **data) -> dict:
         """
@@ -471,10 +484,13 @@ class PerSamplePerChannelTransformMixin(BaseTransformMixin):
                     with self.random_cxm(seed + b + c):
                         kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                         kwargs.update(self.get_pair_kwargs(key))
+                        cur_input = cur_data[b, c][None, None, ...]
+                        if self._tensor_dim_check:
+                            assert check_tensor_dim(cur_input)
                         if torch.rand(1).item() < self.p:
-                            processed_batch.append(self.augment_fn(cur_data[b, c][None, None, ...], **kwargs))
+                            processed_batch.append(self.augment_fn(cur_input, **kwargs))
                         else:
-                            processed_batch.append(data[key][:, c][None, None, ...])
+                            processed_batch.append(cur_input)
                 data[key][b] = torch.cat(processed_batch, dim=1)[0]
 
         return data
