@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, cast
 
+from rising.utils.checktype import to_scalar
 from rising.utils.shape import check_tensor_dim
 
 try:
@@ -49,6 +50,8 @@ class AbstractTransform(nn.Module):
         Registers a parameter sampler to the transform.
         Internally a property is created to forward calls to the attribute to
         calls of the sampler.
+
+        All passed sampler would be set to AbstractParameter and to save into base class
 
         Args:
             name : the property name
@@ -211,6 +214,7 @@ class BaseTransform(AbstractTransform, ABC):
 
         self.per_sample = per_sample
 
+        # todo: to simplify this part, to make every kwargs to arg_function to be iterable and index-able
         for kwarg_name in paired_kw_names:
             self.register_paired_attribute(kwarg_name, getattr(self, kwarg_name))
 
@@ -274,7 +278,7 @@ if TYPE_CHECKING:
 else:
     _MIXIN_BASE = ABC
 
-tensor_dim_check = True
+tensor_dim_check = False
 
 
 class BaseTransformMixin(_MIXIN_BASE):
@@ -311,7 +315,7 @@ class BaseTransformMixin(_MIXIN_BASE):
                 kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                 kwargs.update(self.get_pair_kwargs(_key))
 
-                if torch.rand(1).item() < self.p:
+                if to_scalar(torch.rand(1)) < self.p:
                     if self._tensor_dim_check:
                         assert check_tensor_dim(data[_key])
 
@@ -364,7 +368,7 @@ class PerSampleTransformMixin(BaseTransformMixin):
                     if self._tensor_dim_check:
                         assert check_tensor_dim(cur_input)
 
-                    if torch.rand(1).item() < self.p:
+                    if to_scalar(torch.rand(1)) < self.p:
                         out.append(self.augment_fn(cur_input, **kwargs))
                     else:
                         out.append(cur_input)
@@ -424,7 +428,7 @@ class PerChannelTransformMixin(BaseTransformMixin):
                     if self._tensor_dim_check:
                         assert check_tensor_dim(cur_input)
 
-                    if torch.rand(1).item() < self.p:
+                    if to_scalar(torch.rand(1)) < self.p:
                         out.append(self.augment_fn(cur_input, **kwargs))
                     else:
                         out.append(cur_input)
@@ -487,7 +491,7 @@ class PerSamplePerChannelTransformMixin(BaseTransformMixin):
                         cur_input = cur_data[b, c][None, None, ...]
                         if self._tensor_dim_check:
                             assert check_tensor_dim(cur_input)
-                        if torch.rand(1).item() < self.p:
+                        if to_scalar(torch.rand(1)) < self.p:
                             processed_batch.append(self.augment_fn(cur_input, **kwargs))
                         else:
                             processed_batch.append(cur_input)

@@ -2,7 +2,7 @@ import collections
 import functools
 import random
 import typing as t
-from contextlib import contextmanager, AbstractContextManager
+from contextlib import AbstractContextManager, contextmanager
 from itertools import repeat
 
 import numpy as np
