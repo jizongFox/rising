@@ -2,7 +2,7 @@ from typing import Sequence, Union
 
 from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSampleTransformMixin
 from rising.transforms.functional.crop import center_crop, random_crop
-from rising.transforms.functional.crop_pad import pad_random_crop, pad_center_crop
+from rising.transforms.functional.crop_pad import pad_center_crop, pad_random_crop
 
 __all__ = ["CenterCrop", "RandomCrop", "PadRandomCrop", "PadCenterCrop"]
 
@@ -29,12 +29,12 @@ class RandomCrop(BaseTransformMixin, BaseTransform):
     """
 
     def __init__(
-            self,
-            *,
-            size: Union[int, Sequence],
-            dist: Union[int, Sequence] = 0,
-            keys: Sequence = ("data",),
-            grad: bool = False,
+        self,
+        *,
+        size: Union[int, Sequence],
+        dist: Union[int, Sequence] = 0,
+        keys: Sequence = ("data",),
+        grad: bool = False,
     ):
         """
         Args:
@@ -49,7 +49,6 @@ class RandomCrop(BaseTransformMixin, BaseTransform):
             grad=grad,
             size=size,
             dist=dist,
-            seeded=True,
             augment_fn_names=("size", "dist"),
         )
 
@@ -60,12 +59,12 @@ class PadRandomCrop(PerSampleTransformMixin, BaseTransform):
     """
 
     def __init__(
-            self,
-            size: Union[int, Sequence],
-            pad_size: Union[int, Sequence[int]] = 0,
-            pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
-            keys: Sequence = ("data",),
-            grad: bool = False,
+        self,
+        size: Union[int, Sequence],
+        pad_size: Union[int, Sequence[int]] = 0,
+        pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
+        keys: Sequence = ("data",),
+        grad: bool = False,
     ):
         """
         Args:
@@ -86,14 +85,13 @@ class PadRandomCrop(PerSampleTransformMixin, BaseTransform):
 
 
 class PadCenterCrop(PerSampleTransformMixin, BaseTransform):
-
     def __init__(
-            self,
-            size: Union[int, Sequence],
-            pad_size: Union[int, Sequence[int]] = 0,
-            pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
-            keys: Sequence = ("data",),
-            grad: bool = False,
+        self,
+        size: Union[int, Sequence],
+        pad_size: Union[int, Sequence[int]] = 0,
+        pad_value: Union[int, float, Sequence[int], Sequence[float]] = 0,
+        keys: Sequence = ("data",),
+        grad: bool = False,
     ):
         """
         Args:

@@ -6,27 +6,34 @@ from torch.multiprocessing import Value
 
 from rising.constants import FInterpolation
 from rising.random import AbstractParameter, DiscreteParameter
-from rising.transforms.abstract import BaseTransform, BaseTransformMixin, PerSampleTransformMixin, ItemSeq
-from rising.transforms.functional import mirror, resize_native, rot90, center_crop
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, ItemSeq, PerSampleTransformMixin
+from rising.transforms.functional import center_crop, mirror, resize_native, rot90
 from rising.utils import check_scalar
 
 scheduler_type = Callable[[int], Union[int, Sequence[int]]]
 
-__all__ = ["Mirror", "Rot90", "ResizeNative", "Zoom", "ProgressiveResize", "SizeStepScheduler",
-           "ResizeNativeCentreCrop"]
+__all__ = [
+    "Mirror",
+    "Rot90",
+    "ResizeNative",
+    "Zoom",
+    "ProgressiveResize",
+    "SizeStepScheduler",
+    "ResizeNativeCentreCrop",
+]
 
 
 class Mirror(PerSampleTransformMixin, BaseTransform):
     """Random mirror transform"""
 
     def __init__(
-            self,
-            *,
-            dims: ItemSeq[Union[int, DiscreteParameter]],
-            p_sample: float = 0.5,
-            keys: Sequence[str] = ("data",),
-            grad: bool = False,
-            per_sample: bool = True,
+        self,
+        *,
+        dims: ItemSeq[Union[int, DiscreteParameter]],
+        p_sample: float = 0.5,
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
+        per_sample: bool = True,
     ):
         """
         Args:
@@ -43,7 +50,6 @@ class Mirror(PerSampleTransformMixin, BaseTransform):
             per_sample=per_sample,
             dims=dims,
             p=p_sample,
-            seeded=True,
         )
 
 
@@ -51,13 +57,13 @@ class Rot90(PerSampleTransformMixin, BaseTransform):
     """Rotate 90 degree around dims"""
 
     def __init__(
-            self,
-            dims: ItemSeq[Union[Sequence[int], DiscreteParameter]],
-            keys: Sequence[str] = ("data",),
-            num_rots: DiscreteParameter = DiscreteParameter((0, 1, 2, 3)),
-            p_sample: float = 0.5,
-            per_sample: bool = True,
-            grad: bool = False,
+        self,
+        dims: ItemSeq[Union[Sequence[int], DiscreteParameter]],
+        keys: Sequence[str] = ("data",),
+        num_rots: DiscreteParameter = DiscreteParameter((0, 1, 2, 3)),
+        p_sample: float = 0.5,
+        per_sample: bool = True,
+        grad: bool = False,
     ):
         """
         Args:
@@ -84,7 +90,6 @@ class Rot90(PerSampleTransformMixin, BaseTransform):
             per_sample=per_sample,
             dims=dims,
             p=p_sample,
-            seeded=True,
             k=num_rots,
         )
 
@@ -93,13 +98,13 @@ class ResizeNative(BaseTransformMixin, BaseTransform):
     """Resize data to given size"""
 
     def __init__(
-            self,
-            size: Union[int, Sequence[int]],
-            mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-            align_corners: ItemSeq[bool] = None,
-            preserve_range: bool = False,
-            keys: Sequence[str] = ("data",),
-            grad: bool = False,
+        self,
+        size: Union[int, Sequence[int]],
+        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+        align_corners: ItemSeq[bool] = None,
+        preserve_range: bool = False,
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
     ):
         """
         Args:
@@ -132,11 +137,16 @@ class ResizeNative(BaseTransformMixin, BaseTransform):
 
 
 class ResizeNativeCentreCrop(ResizeNative):
-
-    def __init__(self, size: Union[int, Sequence[int]], mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-                 align_corners: ItemSeq[bool] = None, preserve_range: bool = False, margin: ItemSeq[int] = 0,
-                 keys: Sequence[str] = ("data",),
-                 grad: bool = False):
+    def __init__(
+        self,
+        size: Union[int, Sequence[int]],
+        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+        align_corners: ItemSeq[bool] = None,
+        preserve_range: bool = False,
+        margin: ItemSeq[int] = 0,
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
+    ):
         """
         This class extends the ResizeNative class to crop the image in the center, useful to exclude the empty borders
 
@@ -185,13 +195,13 @@ class Zoom(BaseTransformMixin, BaseTransform):
     """
 
     def __init__(
-            self,
-            scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
-            mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-            align_corners: ItemSeq[bool] = None,
-            preserve_range: bool = False,
-            keys: Sequence[str] = ("data",),
-            grad: bool = False,
+        self,
+        scale_factor: Union[Sequence, AbstractParameter] = (0.75, 1.25),
+        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+        align_corners: ItemSeq[bool] = None,
+        preserve_range: bool = False,
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
     ):
         """
         Args:
@@ -232,13 +242,13 @@ class ProgressiveResize(ResizeNative):
     """Resize data to sizes specified by scheduler"""
 
     def __init__(
-            self,
-            scheduler: scheduler_type,
-            mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
-            align_corners: ItemSeq[Optional[bool]] = None,
-            preserve_range: bool = False,
-            keys: Sequence = ("data",),
-            grad: bool = False,
+        self,
+        scheduler: scheduler_type,
+        mode: ItemSeq[FInterpolation] = FInterpolation.nearest,
+        align_corners: ItemSeq[Optional[bool]] = None,
+        preserve_range: bool = False,
+        keys: Sequence = ("data",),
+        grad: bool = False,
     ):
         """
         Args:

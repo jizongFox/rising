@@ -202,7 +202,6 @@ class BaseTransform(AbstractTransform, ABC):
 
         self._paired_kw_names: List[str] = []  # hidden list
         self._augment_fn_names = augment_fn_names  # kwargs passed to the augment_fn
-        self.paired_kw_names = paired_kw_names
 
         self.augment_fn = augment_fn
 
@@ -212,13 +211,13 @@ class BaseTransform(AbstractTransform, ABC):
 
         self.per_sample = per_sample
 
-        for kwarg_name in self.paired_kw_names:
+        for kwarg_name in paired_kw_names:
             self.register_paired_attribute(kwarg_name, getattr(self, kwarg_name))
 
         for name, val in sampler_vals.items():
             self.register_sampler(name, val)  # lazy sampling values
 
-    def sample_for_batch(self, name: str, batch_size: int) -> Optional[Union[Any, Sequence[Any]]]:
+    def sample_for_batch(self, name: str, batch_size: int) -> Optional[Sequence[Any]]:
         """
         Sample elements for batch
 
@@ -232,8 +231,9 @@ class BaseTransform(AbstractTransform, ABC):
         elem = getattr(self, name)
         if elem is not None and self.per_sample:
             return [elem] + [getattr(self, name) for _ in range(batch_size - 1)]
-        else:
-            return elem  # either a single scalar value or None
+        if elem is None:
+            return None
+        return [elem] * batch_size
 
     def register_paired_attribute(self, name: str, value: ItemSeq[T]):
         if name in self._paired_kw_names:
@@ -255,6 +255,19 @@ class BaseTransform(AbstractTransform, ABC):
         """
         raise NotImplementedError
 
+    @property
+    def num_keys(self) -> int:
+        return len(self.keys)
+
+    def __len__(self):
+        return self.num_keys
+
+    @property
+    def seeded(self) -> bool:
+        if self.num_keys >= 2:
+            return True
+        return False
+
 
 if TYPE_CHECKING:
     _MIXIN_BASE = BaseTransform
@@ -268,15 +281,13 @@ class BaseTransformMixin(_MIXIN_BASE):
     you don't care about per_sample option.
     """
 
-    def __init__(self, *, seeded: bool = True, p: float = 1, tensor_dim_check: bool = False, **kwargs) -> None:
+    def __init__(self, *, p: float = 1, tensor_dim_check: bool = False, **kwargs) -> None:
         """
         Args:
-            seeded: bool, default False. if the transformation need to fix the random seed for each key
             p: float: probability of applying augment_fn per batch
             tensor_dim_check: bool, default False. if the transformation need to check the tensor dimension
         """
         super().__init__(**kwargs)
-        self.seeded = seeded
         assert 0 <= p <= 1, p
         self.p = p
         self._tensor_dim_check = tensor_dim_check
@@ -325,7 +336,7 @@ class PerSampleTransformMixin(BaseTransformMixin):
         Args:
             p: probability of applying the transform per sample.
         """
-        super(PerSampleTransformMixin, self).__init__(seeded=True, p=p, tensor_dim_check=tensor_dim_check, **kwargs)
+        super(PerSampleTransformMixin, self).__init__(p=p, tensor_dim_check=tensor_dim_check, **kwargs)
 
     def forward(self, **data) -> dict:
         """
@@ -380,7 +391,7 @@ class PerChannelTransformMixin(BaseTransformMixin):
             per_channel: whether to apply the transform per channel.
             tensor_dim_check: whether to check the tensor dimension.
         """
-        super().__init__(seeded=True, p=p, tensor_dim_check=tensor_dim_check, **kwargs)
+        super().__init__(p=p, tensor_dim_check=tensor_dim_check, **kwargs)
         self.per_channel = per_channel
 
     def forward(self, **data) -> dict:
