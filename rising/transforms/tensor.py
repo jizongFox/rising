@@ -26,21 +26,21 @@ class ToTensor(BaseTransformMixin, BaseTransform):
             grad: enable gradient computation inside transformation
             **kwargs: keyword arguments passed to augment_fn
         """
-        super().__init__(augment_fn=default_convert, keys=keys, grad=grad, **kwargs)
+        super().__init__(augment_fn=default_convert, keys=keys, grad=grad, tensor_dim_check=False, **kwargs)
 
 
 class _ToDeviceDtype(BaseTransformMixin, BaseTransform):
     """Push data to device and convert to tdype"""
 
     def __init__(
-        self,
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
-        non_blocking: bool = False,
-        copy: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs,
+            self,
+            device: Optional[Union[torch.device, str]] = None,
+            dtype: Optional[torch.dtype] = None,
+            non_blocking: bool = False,
+            copy: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs,
     ):
         """
         Args:
@@ -70,13 +70,13 @@ class ToDevice(_ToDeviceDtype):
     """Push data to device"""
 
     def __init__(
-        self,
-        device: Optional[Union[torch.device, str]],
-        non_blocking: bool = False,
-        copy: bool = False,
-        keys: Sequence = ("data",),
-        grad: bool = False,
-        **kwargs,
+            self,
+            device: Optional[Union[torch.device, str]],
+            non_blocking: bool = False,
+            copy: bool = False,
+            keys: Sequence = ("data",),
+            grad: bool = False,
+            **kwargs,
     ):
         """
         Args:

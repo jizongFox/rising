@@ -2,7 +2,7 @@ import collections
 import functools
 import random
 import typing as t
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager, AbstractContextManager
 from itertools import repeat
 
 import numpy as np
@@ -16,7 +16,27 @@ from rising.random.abstract import AbstractParameter
 __all__ = ["ntuple", "single", "pair", "triple", "quadruple", "fix_seed_cxm", "nullcxm"]
 
 T = t.TypeVar("T")
-nullcxm = nullcontext
+
+
+class nullcxm(AbstractContextManager):
+    """Context manager that does no additional processing.
+
+    Used as a stand-in for a normal context manager, when a particular
+    block of code is only sometimes used with a normal context manager:
+
+    cm = optional_cm if condition else nullcontext()
+    with cm:
+        # Perform operation, using optional_cm if condition is True
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *excinfo):
+        pass
 
 
 def ntuple(n: int) -> t.Callable[[t.Union[T, t.Sequence[T]]], t.Sequence[T]]:
