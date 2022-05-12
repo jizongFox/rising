@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from rising.transforms import _AbstractTransform
+from rising.transforms import AbstractTransform
 from rising.transforms.compose import Compose, DropoutCompose, OneOf, _TransformWrapper
 from rising.transforms.spatial import Mirror
 from rising.utils.transforms import iter_transform
@@ -72,7 +72,7 @@ class TestCompose(unittest.TestCase):
             compose = DropoutCompose(self.transforms, dropout=[1.0])
 
     def test_device_dtype_change(self):
-        class DummyTrafo(_AbstractTransform):
+        class DummyTrafo(AbstractTransform):
             def __init__(self, a):
                 super().__init__(False)
                 self.register_buffer("tmp", a)

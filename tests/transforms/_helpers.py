@@ -1,7 +1,10 @@
-from rising.transforms.abstract import _AbstractTransform
+import typing
+
+if typing.TYPE_CHECKING:
+    from rising.transforms.abstract import AbstractTransform
 
 
-def chech_data_preservation(trafo: _AbstractTransform, batch: dict, key: str = "data") -> bool:
+def check_data_preservation(trafo: "AbstractTransform", batch: dict, key: str = "data") -> bool:
     """
     Checks for inplace modification of input data
 

@@ -13,10 +13,9 @@ from torch import nn
 
 from rising.random.abstract import AbstractParameter
 
-T = t.TypeVar("T")
-
 __all__ = ["ntuple", "single", "pair", "triple", "quadruple", "fix_seed_cxm", "nullcxm"]
 
+T = t.TypeVar("T")
 nullcxm = nullcontext
 
 
@@ -26,7 +25,7 @@ def ntuple(n: int) -> t.Callable[[t.Union[T, t.Sequence[T]]], t.Sequence[T]]:
             return nn.ModuleList([x])
         if isinstance(x, (Tensor, np.ndarray, str)):
             return tuple(repeat(x, n))
-        if isinstance(x, collections.abc.Iterable):
+        if isinstance(x, collections.Iterable):
             item_list = tuple(x)
             if len(item_list) == n:
                 return item_list

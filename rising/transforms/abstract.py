@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, cast
+
+from rising.utils.shape import check_tensor_dim
 
 try:
-    from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, final
+    from typing import final
 except ImportError:
-    from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
     from typing_extensions import final
 
 import torch
@@ -13,7 +15,7 @@ from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import fix_seed_cxm, ntuple, nullcxm
 
 __all__ = [
-    "_AbstractTransform",
+    "AbstractTransform",
     "ItemSeq",
     "BaseTransform",
     "PerChannelTransformMixin",
@@ -28,7 +30,7 @@ augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
 
-class _AbstractTransform(nn.Module):
+class AbstractTransform(nn.Module):
     """Base class for all transforms"""
 
     def __init__(self, *, grad: bool = False, **kwargs):
@@ -69,7 +71,8 @@ class _AbstractTransform(nn.Module):
             if not isinstance(_sampler, AbstractParameter):
                 _sampler = DiscreteParameter([_sampler], replacement=True)
             new_sampler.append(_sampler)
-        sampler = new_sampler
+
+        sampler = cast(List[AbstractParameter], new_sampler)
 
         def sample(self):
             """
@@ -149,7 +152,7 @@ class _AbstractTransform(nn.Module):
         raise NotImplementedError
 
 
-class BaseTransform(_AbstractTransform, ABC):
+class BaseTransform(AbstractTransform, ABC):
     """
     Transform to apply a functional interface to given keys
 
@@ -253,37 +256,30 @@ class BaseTransform(_AbstractTransform, ABC):
         raise NotImplementedError
 
 
-class _BaseMixin(ABC):
-    """
-    base mixin class to perform the forward function.
-    """
-
-    per_sample: bool  # we have per_sample by default.
-    get_pair_kwargs: Callable[[str], Dict[str, Any]]
-    kwargs: Dict[str, Any]
-    keys: Sequence[str]
-    augment_fn: Callable  # all augment_fn take BCHWD as data input.
-
-    _augment_fn_names: Sequence[str]
-    _paired_kw_names: List[str]
+if TYPE_CHECKING:
+    _MIXIN_BASE = BaseTransform
+else:
+    _MIXIN_BASE = ABC
 
 
-class BaseTransformMixin(_BaseMixin):
+class BaseTransformMixin(_MIXIN_BASE):
     """
     this mixin call augment_fun and put all batch data into the data.
     you don't care about per_sample option.
     """
 
-    def __init__(self, *, seeded: bool = True, p: float = 1, **kwargs) -> None:
+    def __init__(self, *, seeded: bool = True, p: float = 1, tensor_dim_check: bool = False, **kwargs) -> None:
         """
         Args:
             seeded: bool, default False. if the transformation need to fix the random seed for each key
             p: float: probability of applying augment_fn per batch
+            tensor_dim_check: bool, default False. if the transformation need to check the tensor dimension
         """
         super().__init__(**kwargs)
         self.seeded = seeded
         assert 0 <= p <= 1, p
         self.p = p
+        self._tensor_dim_check = tensor_dim_check
 
     def forward(self, **data) -> Dict[str, Any]:
         """
@@ -303,6 +299,9 @@ class BaseTransformMixin(_BaseMixin):
                 kwargs.update(self.get_pair_kwargs(_key))
 
                 if torch.rand(1).item() < self.p:
+                    if self._tensor_dim_check:
+                        assert check_tensor_dim(data[_key])
+
                     data[_key] = self.augment_fn(data[_key], **kwargs)
         return data
 
@@ -321,14 +320,12 @@ class PerSampleTransformMixin(BaseTransformMixin):
 
     """
 
-    def __init__(self, *, p: float = 1, **kwargs):
+    def __init__(self, *, p: float = 1, tensor_dim_check: bool = False, **kwargs):
         """
         Args:
             p: probability of applying the transform per sample.
         """
-        super(PerSampleTransformMixin, self).__init__(**kwargs)
-        assert 0 <= p <= 1, p
-        self.p = p
+        super(PerSampleTransformMixin, self).__init__(seeded=True, p=p, tensor_dim_check=tensor_dim_check, **kwargs)
 
     def forward(self, **data) -> dict:
         """
@@ -350,11 +347,14 @@ class PerSampleTransformMixin(BaseTransformMixin):
                 with self.random_cxm(seed + b):
                     kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                     kwargs.update(self.get_pair_kwargs(key))
+                    cur_input = data[key][b][None, ...]
+                    if self._tensor_dim_check:
+                        assert check_tensor_dim(cur_input)
 
                     if torch.rand(1).item() < self.p:
-                        out.append(self.augment_fn(data[key][b][None, ...], **kwargs))
+                        out.append(self.augment_fn(cur_input, **kwargs))
                     else:
-                        out.append(data[key][b][None, ...])
+                        out.append(cur_input)
 
             data[key] = torch.cat(out, dim=0)
         return data
@@ -373,15 +373,15 @@ class PerChannelTransformMixin(BaseTransformMixin):
         result in different augmentations per channel and key.
     """
 
-    def __init__(self, *, per_channel: bool, p: float = 1, **kwargs):
+    def __init__(self, *, p: float = 1, per_channel: bool = True, tensor_dim_check: bool = False, **kwargs) -> None:
         """
         Args:
-            per_channel:bool parameter to perform per_channel operation
-            kwargs: base parameters
+            p: probability of applying the transform per sample.
+            per_channel: whether to apply the transform per channel.
+            tensor_dim_check: whether to check the tensor dimension.
         """
-        super().__init__(**kwargs)
+        super().__init__(seeded=True, p=p, tensor_dim_check=tensor_dim_check, **kwargs)
         self.per_channel = per_channel
-        self.p = p
 
     def forward(self, **data) -> dict:
         """
@@ -405,10 +405,14 @@ class PerChannelTransformMixin(BaseTransformMixin):
                 with self.random_cxm(seed + c):
                     kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
                     kwargs.update(self.get_pair_kwargs(key))
+                    cur_input = data[key][:, c].unsqueeze(1)
+                    if self._tensor_dim_check:
+                        assert check_tensor_dim(cur_input)
+
                     if torch.rand(1).item() < self.p:
-                        out.append(self.augment_fn(data[key][:, c].unsqueeze(1), **kwargs))
+                        out.append(self.augment_fn(cur_input, **kwargs))
                     else:
-                        out.append(data[key][:, c].unsqueeze(1))
+                        out.append(cur_input)
             data[key] = torch.cat(out, dim=1)
 
         return data

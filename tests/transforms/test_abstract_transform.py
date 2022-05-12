@@ -4,7 +4,7 @@ from unittest.mock import Mock, call
 
 import torch
 
-from rising.transforms import BaseTransform, PerChannelTransformMixin, PerSampleTransformMixin, _AbstractTransform
+from rising.transforms import AbstractTransform, BaseTransform, PerChannelTransformMixin, PerSampleTransformMixin
 
 
 class AddTransform(PerSampleTransformMixin, BaseTransform):
@@ -46,7 +46,7 @@ class TestAbstractTransform(unittest.TestCase):
         self.batch_dict = {"data": torch.rand(1, 1, 32, 32), "seg": torch.rand(1, 1, 32, 32), "label": torch.arange(3)}
 
     def test_abstract_transform(self):
-        trafo = _AbstractTransform(grad=False, internal0=True)
+        trafo = AbstractTransform(grad=False, internal0=True)
         self.assertTrue(trafo.internal0)
         with self.assertRaises(NotImplementedError):
             trafo(**self.batch_dict)

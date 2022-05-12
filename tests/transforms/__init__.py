@@ -1,1 +1,1 @@
-from ._helpers import chech_data_preservation
+from ._helpers import check_data_preservation
