@@ -2,11 +2,13 @@ from functools import partial
 from itertools import combinations
 from random import choices as sample_with_replacement
 from random import sample as sample_without_replacement
-from typing import List, Sequence
+from typing import List, Sequence, TypeVar
 
 from rising.random.abstract import AbstractParameter
 
 __all__ = ["DiscreteParameter", "DiscreteCombinationsParameter"]
+
+T = TypeVar("T")
 
 
 def combinations_all(data: Sequence) -> List:
@@ -32,28 +34,31 @@ class DiscreteParameter(AbstractParameter):
     """
 
     def __init__(
-        self, population: Sequence, replacement: bool = False, weights: Sequence = None, cum_weights: Sequence = None
+        self,
+        population: Sequence[T],
+        replacement: bool = False,
+        weights: Sequence[T] = None,
+        cum_weights: Sequence[T] = None,
     ):
         """
         Args:
             population : the parameter population to sample from
-            replacement : whether or not to sample with replacement
+            replacement : whether to sample with replacement
             weights : relative sampling weights
             cum_weights : cumulative sampling weights
         """
         super().__init__()
         if replacement:
             sample_fn = partial(sample_with_replacement, weights=weights, cum_weights=cum_weights)
+        elif weights is not None or cum_weights is not None:
+            raise ValueError("weights and cum_weights should only be specified if " "replacement is set to True!")
         else:
-            if weights is not None or cum_weights is not None:
-                raise ValueError("weights and cum_weights should only be specified if " "replacement is set to True!")
-
-            sample_fn = sample_without_replacement  # noqa
+            sample_fn = sample_without_replacement
 
         self.sample_fn = sample_fn
         self.population = population
 
-    def sample(self, n_samples: int) -> list:
+    def sample(self, n_samples: int) -> List[T]:
         """
         Samples from the discrete internal population
 
@@ -73,11 +78,15 @@ class DiscreteCombinationsParameter(DiscreteParameter):
     possible combinations of the given population
     """
 
-    def __init__(self, population: Sequence, replacement: bool = False):
+    def __init__(self, population: Sequence[T], replacement: bool = False):
         """
         Args:
             population : population to build combination of
-            replacement : whether or not to sample with replacement
+            replacement : whether to sample with replacement
         """
         population = combinations_all(population)
         super().__init__(population=population, replacement=replacement)
+
+
+if __name__ == "__main__":
+    print(DiscreteParameter(population=[1, 2, 3, 4, 5], replacement=True))

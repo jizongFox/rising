@@ -1,9 +1,10 @@
-from typing import Union
+from typing import Union, cast
 
 import torch
 from torch.distributions import Distribution as TorchDistribution
 
 from rising.random.abstract import AbstractParameter, ConstantParameter
+from rising.utils import check_scalar
 
 __all__ = ["ContinuousParameter", "NormalParameter", "UniformParameter"]
 
@@ -29,6 +30,8 @@ class ContinuousParameter(AbstractParameter):
         Returns
             torch.Tensor: samples
         """
+
+        # input should be a tuple or torch.Size tuple.
         return self.dist.sample((n_samples,))
 
 
@@ -36,6 +39,7 @@ class NormalParameter(ContinuousParameter):
     """
     Samples Parameters from a normal distribution.
     For details have a look at :class:`torch.distributions.Normal`
+    if sigma is 0, return a ConstantParameter
     """
 
     def __init__(self, mu: Union[float, torch.Tensor], sigma: Union[float, torch.Tensor]):
@@ -44,25 +48,33 @@ class NormalParameter(ContinuousParameter):
             mu : the distributions mean
             sigma : the distributions standard deviation
         """
+        assert check_scalar(mu) and check_scalar(sigma)
         if sigma == 0:
-            super(NormalParameter, self).__init__(ConstantParameter(constant=mu))  # return constant
+            dist = cast(torch.distributions.Distribution, ConstantParameter(constant=mu))
         else:
-            super().__init__(torch.distributions.Normal(loc=mu, scale=sigma))
+            dist = torch.distributions.Normal(mu, sigma)
+        super().__init__(dist)
 
 
 class UniformParameter(ContinuousParameter):
     """
     Samples Parameters from a uniform distribution.
     For details have a look at :class:`torch.distributions.Uniform`
+    if `low`==`high` , return a ConstantParameter
     """
 
-    def __init__(self, low: Union[float, torch.Tensor], high: Union[float, torch.Tensor]):
+    def __init__(self, low: Union[float, int, torch.Tensor], high: Union[float, int, torch.Tensor]):
         """
         Args:
             low : the lower range (inclusive)
             high : the higher range (exclusive)
         """
+        assert check_scalar(low) and check_scalar(high)
+
         if low == high:
-            super(UniformParameter, self).__init__(ConstantParameter(low))  # return constant
+            dist = cast(torch.distributions.Distribution, ConstantParameter(low))
+        elif low < high:
+            dist = torch.distributions.Uniform(low=low, high=high)
         else:
-            super().__init__(torch.distributions.Uniform(low=low, high=high))
+            raise ValueError("low must be smaller than high, given: low={} and high={}".format(low, high))
+        super().__init__(dist)
