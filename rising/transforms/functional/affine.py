@@ -23,6 +23,7 @@ __all__ = [
     "create_scale",
     "create_translation",
     "parametrize_matrix",
+    "AffineParamType",
 ]
 
 from rising.utils.inverse import orthogonal_inverse
@@ -205,7 +206,7 @@ def create_rotation(
     """
     if rotation is None:
         rotation = 0
-    num_rot_params = 1 if ndim == 2 else ndim
+    num_rot_params = 1 if ndim == 2 else ndim  # this prevents to put 2 dimensional input for 2d images.
 
     rotation = expand_scalar_param(rotation, batchsize, num_rot_params).to(device=device, dtype=dtype)
     if degree:
@@ -446,6 +447,7 @@ def affine_image_transform(
             pixels. If set to False, they are instead considered as referring
             to the corner points of the input’s corner pixels,
             making the sampling more resolution agnostic.
+        reverse_order: todo to add the specific details.
 
     Returns:
         torch.Tensor: transformed image

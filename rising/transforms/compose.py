@@ -1,13 +1,18 @@
-from random import shuffle
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
+import numpy as np
 import torch
 
 from rising.random import ContinuousParameter, UniformParameter
-from rising.transforms import AbstractTransform
+from rising.transforms import _AbstractTransform
+from rising.transforms.sitk import _ITKTransform
 from rising.utils import check_scalar
 
-__all__ = ["Compose", "DropoutCompose", "OneOf"]
+__all__ = [
+    "Compose",
+    "DropoutCompose",
+    "OneOf",
+]
 
 
 def dict_call(batch: dict, transform: Callable) -> Any:
@@ -21,6 +26,10 @@ def dict_call(batch: dict, transform: Callable) -> Any:
     Returns:
         Any: transformed batch
     """
+    if not isinstance(batch, Mapping):
+        raise RuntimeError(
+            "You may want to pass `default_transform_call` from rising.loading as `transform_call` to `Compose`"
+        )
     return transform(**batch)
 
 
@@ -56,14 +65,14 @@ class _TransformWrapper(torch.nn.Module):
         return self.trafo(*args, **kwargs)
 
 
-class Compose(AbstractTransform):
+class Compose(_AbstractTransform):
     """
     Compose multiple transforms
     """
 
     def __init__(
         self,
-        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
+        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
         shuffle: bool = False,
         transform_call: Callable[[Any, Callable], Any] = dict_call,
     ):
@@ -103,10 +112,13 @@ class Compose(AbstractTransform):
         assert len(self.transforms) == len(self.transform_order)
         data = seq_like if seq_like else map_like
 
+        seed = int(torch.randint(0, int(1e6), (1,)))
+        torch.manual_seed(seed)
         if self.shuffle:
-            shuffle(self.transform_order)
+            self.shuffle_transform()
 
         for idx in self.transform_order:
+            torch.manual_seed(seed + idx)
             data = self.transform_call(data, self.transforms[idx])
         return data
 
@@ -121,7 +133,7 @@ class Compose(AbstractTransform):
         return self._transforms
 
     @transforms.setter
-    def transforms(self, transforms: Union[AbstractTransform, Sequence[AbstractTransform]]):
+    def transforms(self, transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]]):
         """
         Transforms setter
 
@@ -163,6 +175,20 @@ class Compose(AbstractTransform):
         self._shuffle = shuffle
         self.transform_order = list(range(len(self.transforms)))
 
+    def shuffle_transform(self):
+        """
+        this function shuffles the Tensor transformation, and exclude all others such as ITK based ones.
+        """
+        tensor_transform_indicator = []
+        for i, trans in enumerate(self.transforms):
+            assert isinstance(trans, _AbstractTransform)
+            if not isinstance(trans, _ITKTransform):
+                tensor_transform_indicator.append(i)
+        transform_mapping = {
+            k: v for k, v in zip(tensor_transform_indicator, np.random.permutation(tensor_transform_indicator))
+        }
+        self.transform_order = [transform_mapping.get(i, i) for i in self.transform_order]
+
 
 class DropoutCompose(Compose):
     """
@@ -171,7 +197,7 @@ class DropoutCompose(Compose):
 
     def __init__(
         self,
-        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
+        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
         dropout: Union[float, Sequence[float]] = 0.5,
         shuffle: bool = False,
         random_sampler: ContinuousParameter = None,
@@ -239,14 +265,14 @@ class DropoutCompose(Compose):
         return data
 
 
-class OneOf(AbstractTransform):
+class OneOf(_AbstractTransform):
     """
     Apply one of the given transforms.
     """
 
     def __init__(
         self,
-        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
+        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
         weights: Optional[Sequence[float]] = None,
         p: float = 1.0,
         transform_call: Callable[[Any, Callable], Any] = dict_call,
@@ -265,7 +291,7 @@ class OneOf(AbstractTransform):
             transforms = transforms[0]
         if not transforms:
             raise ValueError("At least one transformation needs to be selected.")
-        self.transforms = transforms
+        self.transforms = torch.nn.ModuleList(transforms)
 
         if weights is not None and len(weights) != len(transforms):
             raise ValueError(
@@ -285,3 +311,6 @@ class OneOf(AbstractTransform):
             index = torch.multinomial(self.weights, 1)
             data = self.transform_call(data, self.transforms[int(index)])
         return data
+
+    def extra_repr(self) -> str:
+        return ", ".join([str(x) for x in self.transforms])

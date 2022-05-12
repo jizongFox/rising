@@ -7,7 +7,7 @@
 ![PyPI - License](https://img.shields.io/pypi/l/rising)
 [![Chat](https://img.shields.io/badge/Slack-PhoenixDL-orange)](https://join.slack.com/t/phoenixdl/shared_invite/enQtODgwODI0MTE1MjgzLTJkZDE4N2NhM2VmNzVhYTEyMzI3NzFmMDY0NjM3MzJlZWRmMTk5ZWM1YzY2YjY5ZGQ1NWI1YmJmOTdiYTdhYTE)
 [![Documentation Status](https://readthedocs.org/projects/rising/badge/?version=latest)](https://rising.readthedocs.io/en/latest/?badge=latest)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/PhoenixDL/rising/master.svg)](https://results.pre-commit.ci/latest/github/PhoenixDL/rising/master)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/PhoenixDL/rising/master.svg)](https://results.pre-commit.ci/latest/github/PhoenixDL/rising/master)[![DOI](https://zenodo.org/badge/222287924.svg)](https://zenodo.org/badge/latestdoi/222287924)
 
 </div>
 
@@ -16,6 +16,19 @@
 | ![Python](https://img.shields.io/badge/python-3.6/3.7/3.8-orange) | ![System](https://img.shields.io/badge/Linux-blue)   | ![Unittests Linux](https://github.com/PhoenixDL/rising/workflows/Unittests%20Linux/badge.svg)     |
 | ![Python](https://img.shields.io/badge/python-3.6/3.7/3.8-orange) | ![System](https://img.shields.io/badge/Windows-blue) | ![Unittests Windows](https://github.com/PhoenixDL/rising/workflows/Unittests%20Windows/badge.svg) |
 | ![Python](https://img.shields.io/badge/python-3.6/3.7/3.8-orange) | ![System](https://img.shields.io/badge/MacOS-blue)   | ![Unittests macOS](https://github.com/PhoenixDL/rising/workflows/Unittests%20MacOS/badge.svg)     |
+
+## What I have modified from the original repo?
+
+I noticed that rising under its current form has small bugs and inconsistency in terms of design and performance, especially for medical image segmentation task with 3D volumes. Based on project requirement, several improvements have been made so that it can now enjoy a better compatibility with 3D datas and intenstive augmentation operations using GPUs. Issues and PRs are welcome.
+
+Thanks a lot @Yuxiang1990 for the kind PR.
+
+## Working example on ACDC dataset
+
+[ACDC example](notebooks/medical_seg/acdc_seg.py) should provide a resonable example of how to use rising besides the below
+explanations.
+
+______________________________________________________________________
 
 ## What is `rising`?
 

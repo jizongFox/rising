@@ -2,13 +2,13 @@ from typing import Hashable, Mapping, Sequence, Union
 
 import torch
 
-from rising.transforms.abstract import AbstractTransform
+from rising.transforms.abstract import _AbstractTransform
 from rising.transforms.functional.utility import box_to_seg, instance_to_semantic, seg_to_box
 
 __all__ = ["DoNothing", "SegToBox", "BoxToSeg", "InstanceToSemantic"]
 
 
-class DoNothing(AbstractTransform):
+class DoNothing(_AbstractTransform):
     """Transform that returns the input as is"""
 
     def __init__(self, grad: bool = False, **kwargs):
@@ -32,7 +32,7 @@ class DoNothing(AbstractTransform):
         return data
 
 
-class SegToBox(AbstractTransform):
+class SegToBox(_AbstractTransform):
     """Convert instance segmentation to bounding boxes"""
 
     def __init__(self, keys: Mapping[Hashable, Hashable], grad: bool = False, **kwargs):
@@ -61,7 +61,7 @@ class SegToBox(AbstractTransform):
         return data
 
 
-class BoxToSeg(AbstractTransform):
+class BoxToSeg(_AbstractTransform):
     """Convert bounding boxes to instance segmentation"""
 
     def __init__(
@@ -108,7 +108,7 @@ class BoxToSeg(AbstractTransform):
         return data
 
 
-class InstanceToSemantic(AbstractTransform):
+class InstanceToSemantic(_AbstractTransform):
     """Convert an instance segmentation to a semantic segmentation"""
 
     def __init__(self, keys: Mapping[str, str], cls_key: Hashable, grad: bool = False, **kwargs):

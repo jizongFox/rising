@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+notebooks/medical_seg/data/
 *.py[cod]
 *$py.class
 *.vscode
@@ -7,13 +8,18 @@ __pycache__
 *.pyc
 *.idea
 *.DS_Store
-
+tmp*
+tests/integration/
+zz*
 # data which is automatically downloaded inside notebooks
 notebooks/ExBox3
+notebooks/MedNIST.tar.gz
+notebooks/MedNIST/
+notebooks/demo_classification.py
 
 # C extensions
 *.so
-
+notebooks/MedNIST
 # Distribution / packaging
 .Python
 build/

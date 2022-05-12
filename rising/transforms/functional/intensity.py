@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Sequence, Union
 
 import torch
@@ -17,6 +18,7 @@ __all__ = [
     "clamp",
     "bezier_3rd_order",
     "random_inversion",
+    "norm_min_max_percentile",
 ]
 
 
@@ -43,7 +45,7 @@ def norm_range(
     Scale range of tensor
 
     Args:
-        data: input data. Per channel option supports [C,H,W] and [C,H,W,D].
+        data: input data. Per channel option supports [B,C,H,W] and [B,C,H,W,D].
         min: minimal value
         max: maximal value
         per_channel: range is normalized per channel
@@ -52,6 +54,7 @@ def norm_range(
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
     if out is None:
         out = torch.zeros_like(data)
 
@@ -68,7 +71,7 @@ def norm_min_max(
     Scale range to [0,1]
 
     Args:
-        data: input data. Per channel option supports [C,H,W] and [C,H,W,D].
+        data: input data without batch dimension. Per channel option supports [B,C,H,W] and [B,C,H,W,D].
         per_channel: range is normalized per channel
         out:  if provided, result is saved in here
         eps: small constant for numerical stability.
@@ -77,6 +80,7 @@ def norm_min_max(
     Returns:
         torch.Tensor: scaled data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
 
     def _norm(_data: torch.Tensor, _out: torch.Tensor):
         _min = _data.min()
@@ -90,11 +94,56 @@ def norm_min_max(
         out = torch.zeros_like(data)
 
     if per_channel:
-        for _c in range(data.shape[0]):
-            out[_c] = _norm(data[_c], out[_c])
+        for _c in range(data.shape[1]):
+            out[:, _c] = _norm(data[:, _c], out[:, _c])
     else:
         out = _norm(data, out)
     return out
+
+
+def norm_min_max_percentile(
+    data: torch.Tensor,
+    min: float,
+    max: float,
+    per_channel: bool = True,
+    out: Optional[torch.Tensor] = None,
+    eps=1e-8,
+):
+    """
+    Normalize data based on min and max percentile between 0 - 100.
+    Args:
+        data: input data, under form of [B,C,H,W] and [B,C,H,W,D].
+        min: low percentile to clamp,  between 0 and 100
+        max: high percentile to clam, between 0 and 100
+        per_channel: if compute the percentile on channel
+        out:
+        eps: small eps to prevent division by 0.l
+    Returns:
+        torch.Tensor: normalized data
+    """
+
+    if out is None:
+        out = torch.empty_like(data)
+
+    if per_channel:
+        for i in range(data.shape[1]):
+            min_ = torch.quantile(data[:, i].float(), float(min))
+            max_ = torch.quantile(data[:, i].float().float(), float(max))
+            out[:, i] = clamp(
+                data[:, i],
+                min=float(min_),
+                max=float(max_),
+            )
+    else:
+        min_ = torch.quantile(data, float(min))
+        max_ = torch.quantile(data, float(max))
+        out = clamp(
+            data,
+            min=float(min_),
+            max=float(max_),
+        )
+
+    return norm_min_max(out, per_channel=per_channel, out=out, eps=eps)
 
 
 def norm_zero_mean_unit_std(
@@ -113,6 +162,7 @@ def norm_zero_mean_unit_std(
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
 
     def _norm(_data: torch.Tensor, _out: torch.Tensor):
         denom = _data.std()
@@ -152,6 +202,8 @@ def norm_mean_std(
     Returns:
         torch.Tensor: normalized data
     """
+    assert data.shape[0] == 1, f"per sample example (batch_size = 1) as the input data, given {data.shape}"
+
     if out is None:
         out = torch.zeros_like(data)
 
@@ -204,6 +256,10 @@ def gamma_correction(data: torch.Tensor, gamma: float) -> torch.Tensor:
     Returns:
         torch.Tensor: gamma corrected data
     """
+    min_, max_ = data.min().detach(), data.max().detach()
+    if min_ < 0 or max_ > 1:
+        warnings.warn("`data` range not in [0, 1]", RuntimeWarning)
+
     if torch.is_tensor(gamma):
         gamma = gamma.to(data)
     return data.pow(gamma)
@@ -246,12 +302,13 @@ def scale_by_value(data: torch.Tensor, value: float, out: Optional[torch.Tensor]
 def bezier_3rd_order(
     data: torch.Tensor, maxv: float = 1.0, minv: float = 0.0, out: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
-    p0 = torch.zeros((1, 2))
-    p1 = torch.rand((1, 2))
-    p2 = torch.rand((1, 2))
-    p3 = torch.ones((1, 2))
+    device, dtype = data.device, data.dtype
+    p0 = torch.zeros((1, 2), device=device, dtype=dtype)
+    p1 = torch.rand((1, 2), device=device, dtype=dtype)
+    p2 = torch.rand((1, 2), device=device, dtype=dtype)
+    p3 = torch.ones((1, 2), device=device, dtype=dtype)
 
-    t = torch.linspace(0.0, 1.0, 1000).unsqueeze(1)
+    t = torch.linspace(0.0, 1.0, 1000, device=device, dtype=dtype).unsqueeze(1)
 
     points = (1 - t * t * t) * p0 + 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t * p3
 
@@ -273,7 +330,6 @@ def random_inversion(
     minv: float = 0.0,
     out: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
-
     if torch.rand((1)) < prob_inversion:
         # Inversion of curve
         out = maxv + minv - data
@@ -282,3 +338,19 @@ def random_inversion(
         out = data
 
     return out
+
+
+def augment_rician_noise(data: torch.Tensor, std: float, keep_range=False):
+    """augment with rician noise
+    Args:
+        data:Tensor input data having dimension of BCHW(D)
+        std: the std of the noise, float
+        keep_range: if keep the image range, default False
+    """
+    min_, max_ = data.min(), data.max()
+    data = torch.sqrt(
+        (data + torch.randn_like(data) * float(std)).pow(2) + (torch.randn_like(data) * float(std)) ** 2
+    ) * torch.sign(data)
+    if keep_range:
+        data = clamp(data, min=min_, max=max_)
+    return data

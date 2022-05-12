@@ -2,13 +2,13 @@ from typing import Optional, Sequence
 
 import torch
 
-from rising.transforms import BaseTransform
+from rising.transforms import BaseTransform, BaseTransformMixin
 from rising.transforms.functional import one_hot_batch
 
 __all__ = ["OneHot", "ArgMax"]
 
 
-class OneHot(BaseTransform):
+class OneHot(BaseTransformMixin, BaseTransform):
     """
     Convert to one hot encoding. One hot encoding is applied in first dimension
     which results in shape N x NumClasses x [same as input] while input is expected to
@@ -38,10 +38,21 @@ class OneHot(BaseTransform):
             Input tensor needs to be of type torch.long. This could
             be achieved by applying `TenorOp("long", keys=("seg",))`.
         """
-        super().__init__(augment_fn=one_hot_batch, keys=keys, grad=grad, num_classes=num_classes, dtype=dtype, **kwargs)
+        super().__init__(
+            augment_fn=one_hot_batch,
+            keys=keys,
+            grad=grad,
+            num_classes=num_classes,
+            dtype=dtype,
+            augment_fn_names=(
+                "num_classes",
+                "dtype",
+            ),
+            **kwargs
+        )
 
 
-class ArgMax(BaseTransform):
+class ArgMax(BaseTransformMixin, BaseTransform):
     """
     Compute argmax along given dimension.
     Can be used to revert OneHot encoding.
@@ -60,4 +71,12 @@ class ArgMax(BaseTransform):
         Warnings
             The output of the argmax function is always a tensor of dtype long.
         """
-        super().__init__(augment_fn=torch.argmax, keys=keys, grad=grad, dim=dim, keepdim=keepdim, **kwargs)
+        super().__init__(
+            augment_fn=torch.argmax,
+            keys=keys,
+            grad=grad,
+            dim=dim,
+            keepdim=keepdim,
+            augment_fn_names=("dim", "keepdim"),
+            **kwargs
+        )

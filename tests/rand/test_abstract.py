@@ -21,7 +21,7 @@ class TestAbstract(unittest.TestCase):
     def test_abstract_error(self):
         param = AbstractParameter()
         with self.assertRaises(NotImplementedError):
-            param.sample((1,))
+            param.sample(n_samples=1)
 
 
 if __name__ == "__main__":

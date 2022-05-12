@@ -41,6 +41,7 @@ def to_device_dtype(
     Args:
         data: data which should be pushed to device. Sequence and mapping
             items are mapping individually to gpu
+        dtype: target dtype
         device: target device
         kwargs: keyword arguments passed to assigning function
 

@@ -2,15 +2,13 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
 
-from rising.transforms.abstract import BaseTransform
+from rising.transforms.abstract import BaseTransform, BaseTransformMixin, ItemSeq
 from rising.transforms.functional.affine import AffineParamType, affine_image_transform, parametrize_matrix
 from rising.utils.affine import matrix_to_cartesian, matrix_to_homogeneous
 from rising.utils.checktype import check_scalar
 
 __all__ = [
-    "Affine",
     "BaseAffine",
-    "StackedAffine",
     "Rotate",
     "Scale",
     "Translate",
@@ -18,7 +16,7 @@ __all__ = [
 ]
 
 
-class Affine(BaseTransform):
+class _Affine(BaseTransform):
     """
     Class Performing an Affine Transformation on a given sample dict.
     The transformation will be applied to all the dict-entries specified
@@ -32,12 +30,11 @@ class Affine(BaseTransform):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
-        **kwargs,
     ):
         """
         Args:
@@ -69,18 +66,20 @@ class Affine(BaseTransform):
                 batch order [(D,)H,W]
             per_sample: sample different values for each element in the batch.
                 The transform is still applied in a batched wise fashion.
-            **kwargs: additional keyword arguments passed to the
-                affine transform
         """
-        super().__init__(augment_fn=affine_image_transform, keys=keys, grad=grad, **kwargs)
+        super().__init__(
+            augment_fn=affine_image_transform,
+            keys=keys,
+            per_sample=per_sample,
+            grad=grad,
+        )
         self.matrix = matrix
         self.register_sampler("output_size", output_size)
         self.adjust_size = adjust_size
-        self.interpolation_mode = interpolation_mode
-        self.padding_mode = padding_mode
-        self.align_corners = align_corners
+        self.interpolation_mode = self.tuple_generator(interpolation_mode)
+        self.padding_mode = self.tuple_generator(padding_mode)
+        self.align_corners = self.tuple_generator(align_corners)
         self.reverse_order = reverse_order
-        self.per_sample = per_sample
 
     def assemble_matrix(self, **data) -> torch.Tensor:
         """
@@ -100,22 +99,22 @@ class Affine(BaseTransform):
             self.matrix = torch.tensor(self.matrix)
         self.matrix = self.matrix.to(data[self.keys[0]])
 
-        batchsize = data[self.keys[0]].shape[0]
+        batch_size = data[self.keys[0]].shape[0]
         ndim = len(data[self.keys[0]].shape) - 2  # channel and batch dim
 
         # batch dimension missing -> Replicate for each sample in batch
         if len(self.matrix.shape) == 2:
-            self.matrix = self.matrix[None].expand(batchsize, -1, -1).clone()
-        if self.matrix.shape == (batchsize, ndim, ndim + 1):
+            self.matrix = self.matrix[None].expand(batch_size, -1, -1).clone()
+        if self.matrix.shape == (batch_size, ndim, ndim + 1):
             return self.matrix
-        elif self.matrix.shape == (batchsize, ndim, ndim):
+        elif self.matrix.shape == (batch_size, ndim, ndim):
             return matrix_to_homogeneous(self.matrix)[:, :-1]
-        elif self.matrix.shape == (batchsize, ndim + 1, ndim + 1):
+        elif self.matrix.shape == (batch_size, ndim + 1, ndim + 1):
             return matrix_to_cartesian(self.matrix)
 
         raise ValueError(
             "Invalid Shape for affine transformation matrix. "
-            "Got %s but expected %s" % (str(tuple(self.matrix.shape)), str((batchsize, ndim, ndim + 1)))
+            "Got %s but expected %s" % (str(tuple(self.matrix.shape)), str((batch_size, ndim, ndim + 1)))
         )
 
     def forward(self, **data) -> dict:
@@ -130,17 +129,18 @@ class Affine(BaseTransform):
         """
         matrix = self.assemble_matrix(**data)
 
-        for key in self.keys:
+        for key, interpolation, padding, align_corners in zip(
+            self.keys, self.interpolation_mode, self.padding_mode, self.align_corners
+        ):
             data[key] = self.augment_fn(
                 data[key],
                 matrix_batch=matrix,
                 output_size=self.output_size,
                 adjust_size=self.adjust_size,
-                interpolation_mode=self.interpolation_mode,
-                padding_mode=self.padding_mode,
-                align_corners=self.align_corners,
+                interpolation_mode=interpolation,  # this can be different
+                padding_mode=padding,  # this can be different
+                align_corners=align_corners,  # this can be different
                 reverse_order=self.reverse_order,
-                **self.kwargs,
             )
 
         return data
@@ -154,10 +154,10 @@ class Affine(BaseTransform):
             other: the other transformation
 
         Returns:
-            StackedAffine: a stacked affine transformation
+            _StackedAffine: a stacked affine transformation
         """
-        if not isinstance(other, Affine):
-            other = Affine(
+        if not isinstance(other, _Affine):
+            other = _Affine(
                 matrix=other,
                 keys=self.keys,
                 grad=self.grad,
@@ -166,10 +166,11 @@ class Affine(BaseTransform):
                 interpolation_mode=self.interpolation_mode,
                 padding_mode=self.padding_mode,
                 align_corners=self.align_corners,
+                per_sample=self.per_sample,
                 **self.kwargs,
             )
 
-        return StackedAffine(
+        return _StackedAffine(
             self,
             other,
             keys=self.keys,
@@ -179,6 +180,7 @@ class Affine(BaseTransform):
             interpolation_mode=self.interpolation_mode,
             padding_mode=self.padding_mode,
             align_corners=self.align_corners,
+            per_sample=self.per_sample,
             **self.kwargs,
         )
 
@@ -191,10 +193,10 @@ class Affine(BaseTransform):
             other: the other transformation
 
         Returns:
-            StackedAffine: a stacked affine transformation
+            _StackedAffine: a stacked affine transformation
         """
-        if not isinstance(other, Affine):
-            other = Affine(
+        if not isinstance(other, _Affine):
+            other = _Affine(
                 matrix=other,
                 keys=self.keys,
                 grad=self.grad,
@@ -203,10 +205,9 @@ class Affine(BaseTransform):
                 interpolation_mode=self.interpolation_mode,
                 padding_mode=self.padding_mode,
                 align_corners=self.align_corners,
-                **self.kwargs,
             )
 
-        return StackedAffine(
+        return _StackedAffine(
             other,
             self,
             grad=other.grad,
@@ -215,11 +216,10 @@ class Affine(BaseTransform):
             interpolation_mode=other.interpolation_mode,
             padding_mode=other.padding_mode,
             align_corners=other.align_corners,
-            **other.kwargs,
         )
 
 
-class StackedAffine(Affine):
+class _StackedAffine(_Affine):
     """
     Class to stack multiple affines with dynamic ensembling by matrix
     multiplication to avoid multiple interpolations.
@@ -227,16 +227,16 @@ class StackedAffine(Affine):
 
     def __init__(
         self,
-        *transforms: Union[Affine, Sequence[Union[Sequence[Affine], Affine]]],
+        *transforms: Union[_Affine, Sequence[Union[Sequence[_Affine], _Affine]]],
         keys: Sequence = ("data",),
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         reverse_order: bool = False,
-        **kwargs,
+        per_sample=True,
     ):
         """
         Args:
@@ -276,7 +276,7 @@ class StackedAffine(Affine):
                 transforms = transforms[0]
 
         # ensure trafos are Affines and not raw matrices
-        transforms = tuple([trafo if isinstance(trafo, Affine) else Affine(matrix=trafo) for trafo in transforms])
+        transforms = tuple([trafo if isinstance(trafo, _Affine) else _Affine(matrix=trafo) for trafo in transforms])
 
         super().__init__(
             keys=keys,
@@ -287,7 +287,7 @@ class StackedAffine(Affine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
-            **kwargs,
+            per_sample=per_sample,
         )
 
         self.transforms = transforms
@@ -315,7 +315,7 @@ class StackedAffine(Affine):
         return matrix_to_cartesian(whole_trafo)
 
 
-class BaseAffine(Affine):
+class BaseAffine(_Affine, BaseTransformMixin):
     """
     Class performing a basic Affine Transformation on a given sample dict.
     The transformation will be applied to all the dict-entries specified
@@ -332,12 +332,12 @@ class BaseAffine(Affine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[Optional[bool]] = False,
         reverse_order: bool = False,
         per_sample: bool = True,
-        **kwargs,
+        p: float = 1,
     ):
         """
         Args:
@@ -373,6 +373,14 @@ class BaseAffine(Affine):
                 calculated dynamically to ensure that the whole image fits.
             interpolation_mode: interpolation mode to calculate output values
                 ``'bilinear'`` | ``'nearest'``. Default: ``'bilinear'``
+                documents from PyTorch:
+                mode (str) – interpolation mode to calculate output values 'bilinear'
+                | 'nearest' | 'bicubic'. Default: 'bilinear'
+                Note: mode='bicubic' supports only 4-D input.
+                When mode='bilinear' and the input is 5-D, the interpolation mode used
+                internally will actually be trilinear. However, when the input is 4-D,
+                the interpolation mode will legitimately be bilinear.
+
             padding_mode: padding mode for outside grid values
                 ``'zeros'`` | ``'border'`` | ``'reflection'``.
                 Default: ``'zeros'``
@@ -389,8 +397,8 @@ class BaseAffine(Affine):
                 batch order [(D,)H,W]
             per_sample: sample different values for each element in the batch.
                 The transform is still applied in a batched wise fashion.
-            **kwargs: additional keyword arguments passed to the
-                affine transform
+            p: float, the probability of applying the transformation on batches.
+
         """
         super().__init__(
             keys=keys,
@@ -402,8 +410,9 @@ class BaseAffine(Affine):
             align_corners=align_corners,
             reverse_order=reverse_order,
             per_sample=per_sample,
-            **kwargs,
         )
+        BaseTransformMixin.__init__(self, seeded=True, p=p)
+        self.p = p
         self.register_sampler("scale", scale)
         self.register_sampler("rotation", rotation)
         self.register_sampler("translation", translation)
@@ -423,16 +432,22 @@ class BaseAffine(Affine):
         Returns:
             torch.Tensor: the (batched) transformation matrix
         """
-        batchsize = data[self.keys[0]].shape[0]
+        batch_size = data[self.keys[0]].shape[0]
         ndim = len(data[self.keys[0]].shape) - 2  # channel and batch dim
         device = data[self.keys[0]].device
         dtype = data[self.keys[0]].dtype
 
+        seed = int(torch.randint(0, int(1e6), (1,)))
+
+        scale = self.sample_for_batch_with_prob("scale", batch_size, default_value=1.0, seed=seed)
+        rotation = self.sample_for_batch_with_prob("rotation", batch_size, default_value=0.0, seed=seed)
+        translation = self.sample_for_batch_with_prob("translation", batch_size, default_value=0.0, seed=seed)
+
         self.matrix = parametrize_matrix(
-            scale=self.sample_for_batch("scale", batchsize),
-            rotation=self.sample_for_batch("rotation", batchsize),
-            translation=self.sample_for_batch("translation", batchsize),
-            batchsize=batchsize,
+            scale=scale,
+            rotation=rotation,
+            translation=translation,
+            batchsize=batch_size,
             ndim=ndim,
             degree=self.degree,
             device=device,
@@ -441,22 +456,25 @@ class BaseAffine(Affine):
         )
         return self.matrix
 
-    def sample_for_batch(self, name: str, batchsize: int) -> Optional[Union[Any, Sequence[Any]]]:
+    def sample_for_batch_with_prob(self, name: str, batch_size: int, *, default_value: float, seed: int):
         """
-        Sample elements for batch
-
-        Args:
-            name: name of parameter
-            batchsize: batch size
-
-        Returns:
-            Optional[Union[Any, Sequence[Any]]]: sampled elements
+        sampling batch with self.p and self.per_sample
         """
-        elem = getattr(self, name)
-        if elem is not None and self.per_sample:
-            return [elem] + [getattr(self, name) for _ in range(batchsize - 1)]
-        else:
-            return elem  # either a single scalar value or None
+        batch_element = self.sample_for_batch(name, batch_size)
+        if batch_element is None:
+            return batch_element
+        with self.random_cxm(seed=int(seed)):
+            if not self.per_sample:
+                batch_element = batch_element if torch.rand(1) < self.p else default_value
+                return batch_element
+            elem_length = len(batch_element[0])
+            if elem_length == 1:
+                return [v if torch.rand(1) < self.p else torch.as_tensor(default_value) for v in batch_element]
+            else:
+                return [
+                    v if torch.rand(1) < self.p else tuple(torch.as_tensor(default_value) for _ in range(elem_length))
+                    for v in batch_element
+                ]
 
 
 class Rotate(BaseAffine):
@@ -476,11 +494,12 @@ class Rotate(BaseAffine):
         degree: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         reverse_order: bool = False,
-        **kwargs,
+        per_sample: bool = True,
+        p: float = 1,
     ):
         """
         Args:
@@ -516,14 +535,11 @@ class Rotate(BaseAffine):
                 transformation to conform to the pytorch convention:
                 transformation params order [W,H(,D)] and
                 batch order [(D,)H,W]
-            **kwargs: additional keyword arguments passed to the
-                affine transform
         """
         super().__init__(
             scale=None,
             rotation=rotation,
             translation=None,
-            matrix=None,
             keys=keys,
             grad=grad,
             degree=degree,
@@ -533,7 +549,8 @@ class Rotate(BaseAffine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
-            **kwargs,
+            per_sample=per_sample,
+            p=p,
         )
 
 
@@ -552,11 +569,13 @@ class Translate(BaseAffine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         unit: str = "pixel",
         reverse_order: bool = False,
+        per_sample: bool = True,
+        p: float = 1,
         **kwargs,
     ):
         """
@@ -600,7 +619,6 @@ class Translate(BaseAffine):
             scale=None,
             rotation=None,
             translation=translation,
-            matrix=None,
             keys=keys,
             grad=grad,
             degree=False,
@@ -610,6 +628,8 @@ class Translate(BaseAffine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
+            per_sample=per_sample,
+            p=p,
             **kwargs,
         )
         self.unit = unit
@@ -647,10 +667,12 @@ class Scale(BaseAffine):
         grad: bool = False,
         output_size: Optional[tuple] = None,
         adjust_size: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         reverse_order: bool = False,
+        per_sample: bool = True,
+        p: float = 1,
         **kwargs,
     ):
         """
@@ -700,7 +722,6 @@ class Scale(BaseAffine):
             scale=scale,
             rotation=None,
             translation=None,
-            matrix=None,
             keys=keys,
             grad=grad,
             degree=False,
@@ -710,6 +731,8 @@ class Scale(BaseAffine):
             padding_mode=padding_mode,
             align_corners=align_corners,
             reverse_order=reverse_order,
+            per_sample=per_sample,
+            p=p,
             **kwargs,
         )
 
@@ -718,11 +741,11 @@ class Resize(Scale):
     def __init__(
         self,
         size: Union[int, Tuple[int]],
-        keys: Sequence = ("data",),
+        keys: Sequence[str] = ("data",),
         grad: bool = False,
-        interpolation_mode: str = "bilinear",
-        padding_mode: str = "zeros",
-        align_corners: bool = False,
+        interpolation_mode: ItemSeq[str] = "bilinear",
+        padding_mode: ItemSeq[str] = "zeros",
+        align_corners: ItemSeq[bool] = False,
         reverse_order: bool = False,
         **kwargs,
     ):

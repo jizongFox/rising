@@ -3,13 +3,20 @@ from typing import Dict, Optional, Sequence, Union
 import torch
 from torch.utils.data._utils.collate import default_convert
 
-from rising.transforms import AbstractTransform, BaseTransform
+from rising.transforms import BaseTransform, BaseTransformMixin
 from rising.transforms.functional import tensor_op, to_device_dtype
 
-__all__ = ["ToTensor", "ToDeviceDtype", "ToDevice", "ToDtype", "TensorOp", "Permute"]
+__all__ = [
+    "ToTensor",
+    "_ToDeviceDtype",
+    "ToDevice",
+    "ToDtype",
+    "TensorOp",
+    "Permute",
+]
 
 
-class ToTensor(BaseTransform):
+class ToTensor(BaseTransformMixin, BaseTransform):
     """Transform Input Collection to Collection of :class:`torch.Tensor`"""
 
     def __init__(self, keys: Sequence = ("data",), grad: bool = False, **kwargs):
@@ -22,7 +29,7 @@ class ToTensor(BaseTransform):
         super().__init__(augment_fn=default_convert, keys=keys, grad=grad, **kwargs)
 
 
-class ToDeviceDtype(BaseTransform):
+class _ToDeviceDtype(BaseTransformMixin, BaseTransform):
     """Push data to device and convert to tdype"""
 
     def __init__(
@@ -33,7 +40,7 @@ class ToDeviceDtype(BaseTransform):
         copy: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -55,11 +62,11 @@ class ToDeviceDtype(BaseTransform):
             dtype=dtype,
             non_blocking=non_blocking,
             copy=copy,
-            **kwargs
+            **kwargs,
         )
 
 
-class ToDevice(ToDeviceDtype):
+class ToDevice(_ToDeviceDtype):
     """Push data to device"""
 
     def __init__(
@@ -69,7 +76,7 @@ class ToDevice(ToDeviceDtype):
         copy: bool = False,
         keys: Sequence = ("data",),
         grad: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -82,10 +89,18 @@ class ToDevice(ToDeviceDtype):
             grad: enable gradient computation inside transformation
             **kwargs: keyword arguments passed to function
         """
-        super().__init__(device=device, non_blocking=non_blocking, copy=copy, keys=keys, grad=grad, **kwargs)
+        super().__init__(
+            device=device,
+            non_blocking=non_blocking,
+            copy=copy,
+            keys=keys,
+            grad=grad,
+            augment_fn_names=("device",),
+            **kwargs,
+        )
 
 
-class ToDtype(ToDeviceDtype):
+class ToDtype(_ToDeviceDtype):
     """Convert data to dtype"""
 
     def __init__(self, dtype: torch.dtype, keys: Sequence = ("data",), grad: bool = False, **kwargs):
@@ -96,10 +111,10 @@ class ToDtype(ToDeviceDtype):
             grad: enable gradient computation inside transformation
             kwargs: keyword arguments passed to function
         """
-        super().__init__(dtype=dtype, keys=keys, grad=grad, **kwargs)
+        super().__init__(dtype=dtype, keys=keys, grad=grad, augment_fn_names=("dtype",), **kwargs)
 
 
-class TensorOp(BaseTransform):
+class TensorOp(BaseTransformMixin, BaseTransform):
     """Apply function which are supported by the `torch.Tensor` class"""
 
     def __init__(self, op_name: str, *args, keys: Sequence = ("data",), grad: bool = False, **kwargs):
@@ -111,10 +126,12 @@ class TensorOp(BaseTransform):
             grad: enable gradient computation inside transformation
             **kwargs: keyword arguments passed to function
         """
-        super().__init__(tensor_op, op_name, *args, keys=keys, grad=grad, **kwargs)
+        super().__init__(
+            augment_fn=tensor_op, fn=op_name, *args, keys=keys, grad=grad, augment_fn_names=("fn",), **kwargs
+        )
 
 
-class Permute(BaseTransform):
+class Permute(BaseTransformMixin, BaseTransform):
     """Permute dimensions of tensor"""
 
     def __init__(self, dims: Dict[str, Sequence[int]], grad: bool = False, **kwargs):

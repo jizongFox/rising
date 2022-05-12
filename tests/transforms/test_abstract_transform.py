@@ -1,19 +1,35 @@
 import unittest
+from typing import Sequence
 from unittest.mock import Mock, call
 
 import torch
 
-from rising.transforms import AbstractTransform, BaseTransform, PerChannelTransform, PerSampleTransform
+from rising.transforms import BaseTransform, PerChannelTransformMixin, PerSampleTransformMixin, _AbstractTransform
 
 
-class AddTransform(AbstractTransform):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.grad_tensor = torch.rand(1, 1, 32, 32, requires_grad=True)
+class AddTransform(PerSampleTransformMixin, BaseTransform):
+    def __init__(
+        self,
+        *,
+        dims=[1],
+        keys: Sequence[str] = ("data",),
+        grad: bool = False,
+        property_names: Sequence[str] = (),
+        key_associate_kwargs_names: Sequence[str] = ("dims",)
+    ):
+        super(AddTransform, self).__init__(
+            augment_fn=sum_dim,
+            keys=keys,
+            grad=grad,
+            property_names=property_names,
+            key_associate_kwargs_names=key_associate_kwargs_names,
+            per_sample=True,
+            seeded=True,
+            dims=dims,
+        )
 
     def forward(self, **data) -> dict:
-        data["data"] = data["data"] + self.grad_tensor
-        return data
+        return super().forward(**data)
 
 
 def sum_dim(data, dims, **kwargs):
@@ -30,7 +46,7 @@ class TestAbstractTransform(unittest.TestCase):
         self.batch_dict = {"data": torch.rand(1, 1, 32, 32), "seg": torch.rand(1, 1, 32, 32), "label": torch.arange(3)}
 
     def test_abstract_transform(self):
-        trafo = AbstractTransform(grad=False, internal0=True)
+        trafo = _AbstractTransform(grad=False, internal0=True)
         self.assertTrue(trafo.internal0)
         with self.assertRaises(NotImplementedError):
             trafo(**self.batch_dict)
@@ -69,7 +85,7 @@ class TestAbstractTransform(unittest.TestCase):
         def augment_fn(inp, *args, **kwargs):
             return mock(inp)
 
-        trafo = PerSampleTransform(augment_fn, keys=("label",))
+        trafo = PerSampleTransformMixin(augment_fn, keys=("label",))
         output = trafo(**self.batch_dict)
         calls = [
             call(torch.tensor([0])),
@@ -84,7 +100,7 @@ class TestAbstractTransform(unittest.TestCase):
         def augment_fn(inp, *args, **kwargs):
             return mock(inp)
 
-        trafo = PerChannelTransform(augment_fn, per_channel=True, keys=("label",))
+        trafo = PerChannelTransformMixin(augment_fn, per_channel=True, keys=("label",))
         self.batch_dict["label"] = self.batch_dict["label"][None]
         output = trafo(**self.batch_dict)
         calls = [
@@ -100,7 +116,7 @@ class TestAbstractTransform(unittest.TestCase):
         def augment_fn(inp, *args, **kwargs):
             return mock(inp)
 
-        trafo = PerChannelTransform(augment_fn, per_channel=False, keys=("label",))
+        trafo = PerChannelTransformMixin(augment_fn, per_channel=False, keys=("label",))
         self.batch_dict["label"] = self.batch_dict["label"][None]
         output = trafo(**self.batch_dict)
         mock.assert_called_once()

@@ -1,13 +1,12 @@
 from typing import Callable, Dict, Hashable, Mapping, Sequence, Tuple, Union
 
+from rising.transforms.abstract import _AbstractTransform
 from rising.transforms.functional.utility import filter_keys, pop_keys
-
-from .abstract import AbstractTransform
 
 __all__ = ["MapToSeq", "SeqToMap", "PopKeys", "FilterKeys", "RenameKeys"]
 
 
-class MapToSeq(AbstractTransform):
+class MapToSeq(_AbstractTransform):
     """
     Convert dict to sequence
     """
@@ -37,7 +36,7 @@ class MapToSeq(AbstractTransform):
         return tuple(data[_k] for _k in self.keys)
 
 
-class SeqToMap(AbstractTransform):
+class SeqToMap(_AbstractTransform):
     """Convert sequence to dict"""
 
     def __init__(self, *keys, grad: bool = False, **kwargs):
@@ -65,7 +64,7 @@ class SeqToMap(AbstractTransform):
         return {_key: data[_idx] for _idx, _key in enumerate(self.keys)}
 
 
-class PopKeys(AbstractTransform):
+class PopKeys(_AbstractTransform):
     """
     Pops keys from a given data dict
     """
@@ -88,7 +87,7 @@ class PopKeys(AbstractTransform):
         return pop_keys(data=data, keys=self.keys, return_popped=self.return_popped)
 
 
-class FilterKeys(AbstractTransform):
+class FilterKeys(_AbstractTransform):
     """
     Filters keys from a given data dict
     """
@@ -111,7 +110,7 @@ class FilterKeys(AbstractTransform):
         return filter_keys(data=data, keys=self.keys, return_popped=self.return_popped)
 
 
-class RenameKeys(AbstractTransform):
+class RenameKeys(_AbstractTransform):
     """Rename keys inside batch"""
 
     def __init__(self, keys: Mapping[Hashable, Hashable]):
