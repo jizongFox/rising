@@ -38,4 +38,4 @@ def to_scalar(x: Union[Any, float, int]) -> Union[float, int]:
     elif isinstance(x, np.ndarray) and x.size == 1:
         return x.item()
     else:
-        raise ValueError("Cannot convert to scalar")
+        raise ValueError("Cannot convert to scalar, given input = {}".format(x))
