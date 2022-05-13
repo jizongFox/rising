@@ -130,7 +130,6 @@ class AbstractTransform(_Abstract, ABC):
 
         __added_dim = False
         if not isinstance(sampler, (tuple, list, ModuleList)):
-            assert isinstance(sampler, (AbstractParameter, str, int, float, torch.Tensor)), sampler
             sampler = [sampler]
             __added_dim = True
 
