@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from rising.random import ContinuousParameter, UniformParameter
-from rising.transforms import _AbstractTransform
+from rising.transforms import AbstractTransform
 from rising.transforms.sitk import _ITKTransform
 from rising.utils import check_scalar
 
@@ -65,14 +65,14 @@ class _TransformWrapper(torch.nn.Module):
         return self.trafo(*args, **kwargs)
 
 
-class Compose(_AbstractTransform):
+class Compose(AbstractTransform):
     """
     Compose multiple transforms
     """
 
     def __init__(
         self,
-        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
+        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
         shuffle: bool = False,
         transform_call: Callable[[Any, Callable], Any] = dict_call,
     ):
@@ -133,7 +133,7 @@ class Compose(_AbstractTransform):
         return self._transforms
 
     @transforms.setter
-    def transforms(self, transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]]):
+    def transforms(self, transforms: Union[AbstractTransform, Sequence[AbstractTransform]]):
         """
         Transforms setter
 
@@ -181,7 +181,7 @@ class Compose(_AbstractTransform):
         """
         tensor_transform_indicator = []
         for i, trans in enumerate(self.transforms):
-            assert isinstance(trans, _AbstractTransform)
+            assert isinstance(trans, AbstractTransform)
             if not isinstance(trans, _ITKTransform):
                 tensor_transform_indicator.append(i)
         transform_mapping = {
@@ -197,7 +197,7 @@ class DropoutCompose(Compose):
 
     def __init__(
         self,
-        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
+        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
         dropout: Union[float, Sequence[float]] = 0.5,
         shuffle: bool = False,
         random_sampler: ContinuousParameter = None,
@@ -265,14 +265,14 @@ class DropoutCompose(Compose):
         return data
 
 
-class OneOf(_AbstractTransform):
+class OneOf(AbstractTransform):
     """
     Apply one of the given transforms.
     """
 
     def __init__(
         self,
-        *transforms: Union[_AbstractTransform, Sequence[_AbstractTransform]],
+        *transforms: Union[AbstractTransform, Sequence[AbstractTransform]],
         weights: Optional[Sequence[float]] = None,
         p: float = 1.0,
         transform_call: Callable[[Any, Callable], Any] = dict_call,

@@ -14,7 +14,7 @@ class AbstractMixin(object):
                     last class before object in mro
             **kwargs: keyword arguments saved to object if it is the last
                 class before object in mro.
-                Otherwise forwarded to next class.
+                Otherwise, forwarded to next class.
         """
         mro = type(self).mro()
         mro_idx = mro.index(AbstractMixin)

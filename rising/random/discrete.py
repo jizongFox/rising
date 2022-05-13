@@ -2,7 +2,9 @@ from functools import partial
 from itertools import combinations
 from random import choices as sample_with_replacement
 from random import sample as sample_without_replacement
-from typing import List, Sequence, TypeVar
+from typing import List, Optional, Sequence, TypeVar, Union
+
+import torch
 
 from rising.random.abstract import AbstractParameter
 
@@ -70,6 +72,52 @@ class DiscreteParameter(AbstractParameter):
 
         """
         return self.sample_fn(population=self.population, k=n_samples)
+
+    def forward(
+        self,
+        size: Optional[Union[Sequence, torch.Size]] = None,
+        device: Union[torch.device, str] = None,
+        dtype: Union[torch.dtype, str] = None,
+        tensor_like: torch.Tensor = None,
+    ) -> Union[None, list, torch.Tensor]:
+        """
+        Forward function (will also be called if the module is called).
+        Calculates the number of samples from the given shape, performs the
+        sampling and converts it back to the correct shape.
+
+        Args:
+            size: the size of the sampled values. If None, it samples one value
+                without reshaping
+            device : the device the result value should be set to, if it is a tensor
+            dtype : the dtype, the result value should be casted to, if it is a tensor
+            tensor_like: the tensor, having the correct dtype and device.
+                The result will be pushed onto this device and casted to this
+                dtype if this is specified.
+
+        Returns:
+            list or torch.Tensor: the sampled values
+
+        Notes:
+            if the parameter ``tensor_like`` is given,
+            it overwrites the parameters ``dtype`` and ``device``
+        """
+        if size is None:
+            size = (1,)
+        n_samples = self._get_n_samples(size)
+        samples = self.sample(n_samples)
+
+        if any([s is None for s in samples]):
+            return None
+
+        if not isinstance(samples, torch.Tensor):
+            samples = torch.tensor(samples).flatten()
+
+        if isinstance(samples, torch.Tensor):
+            if tensor_like is not None:
+                samples = samples.to(tensor_like)
+            else:
+                samples = samples.to(device=device, dtype=dtype)
+        return samples
 
 
 class DiscreteCombinationsParameter(DiscreteParameter):

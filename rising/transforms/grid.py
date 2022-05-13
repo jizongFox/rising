@@ -6,7 +6,7 @@ from torch import Tensor
 from torch.nn import functional as F
 
 from rising.random.utils import fix_random_seed_ctx
-from rising.transforms.abstract import ItemSeq, _AbstractTransform
+from rising.transforms.abstract import AbstractTransform, ItemSeq
 from rising.transforms.functional import center_crop, random_crop
 from rising.transforms.kernel import GaussianSmoothing
 from rising.utils.affine import get_batched_eye, matrix_to_homogeneous
@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-class GridTransform(_AbstractTransform):
+class GridTransform(AbstractTransform):
     """
     Abstract class for grid transformation.
     """

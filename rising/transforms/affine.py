@@ -411,7 +411,7 @@ class BaseAffine(_Affine, BaseTransformMixin):
             reverse_order=reverse_order,
             per_sample=per_sample,
         )
-        BaseTransformMixin.__init__(self, seeded=True, p=p)
+        BaseTransformMixin.__init__(self, p=p)
         self.p = p
         self.register_sampler("scale", scale)
         self.register_sampler("rotation", rotation)
@@ -460,7 +460,7 @@ class BaseAffine(_Affine, BaseTransformMixin):
         """
         sampling batch with self.p and self.per_sample
         """
-        batch_element = self.sample_for_batch(name, batch_size)
+        batch_element = self.sample_for_batch(name, batch_size)  # batch_size x 1 or None
         if batch_element is None:
             return batch_element
         with self.random_cxm(seed=int(seed)):

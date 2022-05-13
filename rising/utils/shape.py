@@ -35,3 +35,12 @@ def reshape_list(flat_list: list, size: Union[torch.Size, tuple]) -> list:
         return [flat_list.pop(0) for _ in range(size[0])]
     else:
         return [reshape_list(flat_list, size[1:]) for _ in range(size[0])]
+
+
+def check_tensor_dim(tensor: torch.Tensor, allow_dims=(4, 5)) -> bool:
+    """
+    Check if tensor has correct number of dimensions
+    Our frameworks only accept 2D, 3D images as input, corresponding to
+    (batch, channel, height, width) or (batch, channel, height, width, depth)
+    """
+    return len(tensor.shape) in allow_dims

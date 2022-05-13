@@ -4,7 +4,7 @@ from notebooks.medical_seg.dataset import ACDCDataset, InfiniteRandomSampler
 from rising import transforms
 from rising.constants import FInterpolation
 from rising.loading import DataLoader, default_transform_call
-from rising.random import UniformParameter
+from rising.random import DiscreteParameter, UniformParameter
 
 tra_dataset = ACDCDataset(root="/home/jizong/Workspace/rising/notebooks/medical_seg/data", train=True)
 
@@ -31,6 +31,12 @@ batch_augment = transforms.Compose(
         p=1,
         per_sample=True,
         interpolation_mode=("bilinear", "nearest"),
+        keys=("image", "label"),
+    ),
+    transforms.Mirror(
+        dims=DiscreteParameter(
+            [0, 1, 2, [1, 2]],
+        ),
         keys=("image", "label"),
     ),
     transforms.RandomCrop(size=(8, 192, 168), keys=("image", "label")),
