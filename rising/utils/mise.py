@@ -42,10 +42,10 @@ class nullcxm(AbstractContextManager):
 def ntuple(n: int) -> t.Callable[[t.Union[T, t.Sequence[T]]], t.Sequence[T]]:
     def parse(x: t.Union[T, t.Sequence[T]]) -> t.Sequence[T]:
         if isinstance(x, AbstractParameter):
-            return nn.ModuleList([x])
+            return nn.ModuleList([x] * n)
         if isinstance(x, (Tensor, np.ndarray, str)):
             return tuple(repeat(x, n))
-        if isinstance(x, collections.Iterable):
+        if isinstance(x, collections.abc.Iterable):
             item_list = tuple(x)
             if len(item_list) == n:
                 return item_list

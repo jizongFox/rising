@@ -49,7 +49,7 @@ class Pad(BaseTransformMixin, BaseTransform):
         for _key in self.keys:
             with self.random_cxm(seed):
                 kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                kwargs.update(self.get_pair_kwargs(_key))
+                kwargs.update(self.get_sequenced_kwargs(_key))
                 input_shape = data[_key].shape[2:]
                 pad_size = self.pad_parameters(input_shape, self.pad_size, ndim=(data[_key].dim() - 2))
                 kwargs.update({"pad_size": pad_size})

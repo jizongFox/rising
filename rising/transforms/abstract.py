@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, cast
 
+from torch.nn import ModuleList
+
 from rising.utils.checktype import to_scalar
 from rising.utils.shape import check_tensor_dim
 
@@ -10,7 +12,7 @@ except ImportError:
     from typing_extensions import final
 
 import torch
-from torch import nn
+from torch import Tensor, nn
 
 from rising.random import AbstractParameter, DiscreteParameter
 from rising.utils.mise import fix_seed_cxm, ntuple, nullcxm
@@ -30,10 +32,11 @@ ItemSeq = Union[T, Sequence[T]]
 augment_callable = Callable[..., Any]
 augment_axis_callable = Callable[[torch.Tensor, Union[float, Sequence]], Any]
 
+ParameterType = Union[AbstractParameter, int, float, Tensor]
+ParameterTypeBoard = ItemSeq[ParameterType]
 
-class AbstractTransform(nn.Module):
-    """Base class for all transforms"""
 
+class _Abstract(nn.Module):
     def __init__(self, *, grad: bool = False, **kwargs):
         """
         Args:
@@ -44,62 +47,6 @@ class AbstractTransform(nn.Module):
         self._registered_samplers: List[str] = []
         for key, item in kwargs.items():
             setattr(self, key, item)
-
-    def register_sampler(self, name: str, sampler: Union[Sequence, AbstractParameter], *args, **kwargs):
-        """
-        Registers a parameter sampler to the transform.
-        Internally a property is created to forward calls to the attribute to
-        calls of the sampler.
-
-        All passed sampler would be set to AbstractParameter and to save into base class
-
-        Args:
-            name : the property name
-            sampler : the sampler. Will be wrapped to a sampler always returning
-                the same element if not already a sampler
-            *args : additional positional arguments (will be forwarded to
-                sampler call)
-            **kwargs : additional keyword arguments (will be forwarded to
-                sampler call)
-        """
-        if name in self._registered_samplers:
-            raise ValueError(f"{name} has been registered as sampler.")
-        self._registered_samplers.append(name)
-
-        if not isinstance(sampler, (tuple, list)):
-            sampler = [sampler]
-
-        new_sampler = []
-        for _sampler in sampler:
-            if not isinstance(_sampler, AbstractParameter):
-                _sampler = DiscreteParameter([_sampler], replacement=True)
-            new_sampler.append(_sampler)
-
-        sampler = cast(List[AbstractParameter], new_sampler)
-
-        def sample(self):
-            """
-            Sample random values
-            """
-            sample_result = tuple([_sampler(*args, **kwargs) for _sampler in sampler])
-
-            if len(sample_result) == 1:
-                return sample_result[0]
-            return sample_result
-
-        if hasattr(self, name):
-            delattr(self, name)
-        setattr(self, name, property(sample))
-
-    def need_sampler(self, value) -> bool:
-        if isinstance(value, AbstractParameter):
-            return True
-        if isinstance(value, (list, tuple)):
-            return any([self.need_sampler(x) for x in value])
-        if isinstance(value, dict):
-            raise NotImplementedError(value)
-        else:
-            return False
 
     @final
     def __getattribute__(self, item) -> Any:
@@ -155,6 +102,79 @@ class AbstractTransform(nn.Module):
         raise NotImplementedError
 
 
+class AbstractTransform(_Abstract, ABC):
+    """Base class for all transforms"""
+
+    def register_sampler(self, name: str, sampler: ParameterTypeBoard, *args, same_per_call: bool = False, **kwargs):
+        """
+        Registers a parameter sampler to the transform.
+        Internally a property is created to forward calls to the attribute to
+        calls of the sampler.
+
+        All passed sampler would be set to AbstractParameter and to save into base class
+
+        Args:
+            name : the property name
+            sampler : the sampler. Will be wrapped to a sampler always returning
+                the same element if not already a sampler
+            *args : additional positional arguments (will be forwarded to
+                sampler call)
+            same_per_call : if True, the sampler will be called per sample, instead, it would use the first sampling
+                of the list, useful to create the same parameter for different key
+            **kwargs : additional keyword arguments (will be forwarded to
+                sampler call)
+        """
+        if name in self._registered_samplers:
+            raise ValueError(f"{name} has been registered as sampler.")
+        self._registered_samplers.append(name)
+
+        __added_dim = False
+        if not isinstance(sampler, (tuple, list, ModuleList)):
+            assert isinstance(sampler, (AbstractParameter, str, int, float, torch.Tensor)), sampler
+            sampler = [sampler]
+            __added_dim = True
+
+        new_sampler = []
+        for _sampler in sampler:
+            if not isinstance(_sampler, AbstractParameter):
+                _sampler = DiscreteParameter([_sampler], replacement=True)
+            new_sampler.append(_sampler)
+
+        sampler = cast(List[AbstractParameter], new_sampler)
+
+        def sample_from_sequence(self):
+            """
+            Sample random values
+            """
+            seed = to_scalar(torch.randint(0, 2**32 - 1, (1,), dtype=torch.int64))
+            if not same_per_call:
+                with self.random_cxm(seed):
+                    sample_result = tuple([_sampler(*args, **kwargs) for _sampler in sampler])
+            # sample from AbstractParameter
+            else:
+                with self.random_cxm(seed):
+                    sample_result = tuple([sampler[0](*args, **kwargs)] * len(self))
+            # same from the first element
+
+            if __added_dim:
+                return sample_result[0]
+            return sample_result
+
+        if hasattr(self, name):
+            delattr(self, name)
+        setattr(self, name, property(sample_from_sequence))
+
+    def need_sampler(self, value) -> bool:
+        if isinstance(value, AbstractParameter):
+            return True
+        if isinstance(value, (list, tuple)):
+            return any([self.need_sampler(x) for x in value])
+        if isinstance(value, dict):
+            raise NotImplementedError(value)
+        else:
+            return False
+
+
 class BaseTransform(AbstractTransform, ABC):
     """
     Transform to apply a functional interface to given keys
@@ -184,7 +204,6 @@ class BaseTransform(AbstractTransform, ABC):
         augment_fn: augment_callable,
         keys: Sequence[str] = ("data",),
         grad: bool = False,
-        paired_kw_names: Sequence[str] = (),
         augment_fn_names: Sequence[str] = (),
         per_sample: bool = True,
         **kwargs,
@@ -201,25 +220,27 @@ class BaseTransform(AbstractTransform, ABC):
             **kwargs: keyword arguments passed to augment_fn
         """
         super().__init__(grad=grad, **kwargs)
-        sampler_vals = {k: v for k, v in kwargs.items() if self.need_sampler(v)}
-
-        self._paired_kw_names: List[str] = []  # hidden list
-        self._augment_fn_names = augment_fn_names  # kwargs passed to the augment_fn
-
         self.augment_fn = augment_fn
+
+        self._augment_fn_names = augment_fn_names  # kwargs passed to the augment_fn
 
         assert isinstance(keys, Sequence), keys
         self.keys = keys
-        self.tuple_generator = ntuple(len(self.keys))
+        self.tuple_generator = ntuple(self.num_keys)
 
         self.per_sample = per_sample
 
         # todo: to simplify this part, to make every kwargs to arg_function to be iterable and index-able
-        for kwarg_name in paired_kw_names:
-            self.register_paired_attribute(kwarg_name, getattr(self, kwarg_name))
+        for name in augment_fn_names:
+            sequenced_param = self.register_paired_attribute(name, getattr(self, name))
+            self.register_sampler(name, sequenced_param, same_per_call=self.same_per_call(getattr(self, name)))
 
-        for name, val in sampler_vals.items():
-            self.register_sampler(name, val)  # lazy sampling values
+    def same_per_call(self, sampler) -> bool:
+        if isinstance(sampler, AbstractParameter) and len(self.keys) > 1:
+            return True
+        if (isinstance(sampler, Sequence) and not isinstance(sampler, str)) and len(sampler) == 1:
+            return self.same_per_call(sampler[0])
+        return False
 
     def sample_for_batch(self, name: str, batch_size: int) -> Optional[Sequence[Any]]:
         """
@@ -240,17 +261,24 @@ class BaseTransform(AbstractTransform, ABC):
         return [elem] * batch_size
 
     def register_paired_attribute(self, name: str, value: ItemSeq[T]):
-        if name in self._paired_kw_names:
-            raise ValueError(f"{name} has been registered in self._pair_kwarg_names")
         if name not in self._augment_fn_names:
             raise ValueError(f"{name} must be provided in `augment_fn_names`")
-        self._paired_kw_names.append(name)
-        setattr(self, name, self.tuple_generator(value))
+        return self.tuple_generator(value)
 
-    def get_pair_kwargs(self, key: str) -> Dict[str, Any]:
+    def _get_sequenced_kwargs(self, /, key: str) -> Dict[str, Any]:
         assert key in self.keys, key
         index = self.keys.index(key)
-        return {k: getattr(self, k)[index] for k in self._paired_kw_names}
+        return {k: getattr(self, k)[index] for k in self._augment_fn_names}
+
+    def get_sequenced_kwargs(self, key: str = None) -> Dict[str, Any]:
+        if key is not None:
+            return self._get_sequenced_kwargs(key=key)
+        result = {}
+        seed = to_scalar(torch.randint(0, 2**32 - 1, (1,), dtype=torch.int64))
+        for key in self.keys:
+            with self.random_cxm(seed):
+                result.update({key: self._get_sequenced_kwargs(key=key)})
+        return result
 
     @abstractmethod
     def forward(self, **data) -> dict:
@@ -271,6 +299,11 @@ class BaseTransform(AbstractTransform, ABC):
         if self.num_keys >= 2:
             return True
         return False
+
+    @property
+    def random_cxm(self):
+        """random seed control context manager, if self.seeded."""
+        return fix_seed_cxm if self.seeded else nullcxm
 
 
 if TYPE_CHECKING:
@@ -308,24 +341,19 @@ class BaseTransformMixin(_MIXIN_BASE):
         Returns:
             dict: dict with augmented data
         """
-        seed = int(torch.randint(0, int(1e16), (1,)))
+        seed = to_scalar(torch.randint(0, int(1e16), (1,)))
 
-        for _key in self.keys:
+        for key in self.keys:
             with self.random_cxm(seed):
-                kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                kwargs.update(self.get_pair_kwargs(_key))
+
+                kwargs = self.get_sequenced_kwargs(key)
 
                 if to_scalar(torch.rand(1)) < self.p:
                     if self._tensor_dim_check:
-                        assert check_tensor_dim(data[_key])
+                        assert check_tensor_dim(data[key])
 
-                    data[_key] = self.augment_fn(data[_key], **kwargs)
+                    data[key] = self.augment_fn(data[key], **kwargs)
         return data
-
-    @property
-    def random_cxm(self):
-        """random seed control context manager, if self.seeded."""
-        return fix_seed_cxm if self.seeded else nullcxm
 
 
 class PerSampleTransformMixin(BaseTransformMixin):
@@ -355,15 +383,14 @@ class PerSampleTransformMixin(BaseTransformMixin):
         if not self.per_sample:
             return super(PerSampleTransformMixin, self).forward(**data)
 
-        seed = int(torch.randint(0, int(1e16), (1,)))
+        seed = to_scalar(torch.randint(0, int(1e16), (1,)))
 
         for key in self.keys:
             batch_size = data[key].shape[0]
             out = []
             for b in range(batch_size):
                 with self.random_cxm(seed + b):
-                    kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                    kwargs.update(self.get_pair_kwargs(key))
+                    kwargs = self.get_sequenced_kwargs(key)
                     cur_input = data[key][b][None, ...]
                     if self._tensor_dim_check:
                         assert check_tensor_dim(cur_input)
@@ -415,15 +442,14 @@ class PerChannelTransformMixin(BaseTransformMixin):
         if not self.per_channel:
             return super().forward(**data)
 
-        seed = int(torch.randint(0, int(1e16), (1,)))
+        seed = to_scalar(torch.randint(0, int(1e16), (1,)))
 
         for key in self.keys:
             out = []
             channel_dim = data[key].shape[1]
             for c in range(channel_dim):
                 with self.random_cxm(seed + c):
-                    kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                    kwargs.update(self.get_pair_kwargs(key))
+                    kwargs = self.get_sequenced_kwargs(key)
                     cur_input = data[key][:, c].unsqueeze(1)
                     if self._tensor_dim_check:
                         assert check_tensor_dim(cur_input)
@@ -486,8 +512,7 @@ class PerSamplePerChannelTransformMixin(BaseTransformMixin):
                 processed_batch = []
                 for c in range(channel_dim):
                     with self.random_cxm(seed + b + c):
-                        kwargs = {k: getattr(self, k) for k in self._augment_fn_names if k not in self._paired_kw_names}
-                        kwargs.update(self.get_pair_kwargs(key))
+                        kwargs = self.get_sequenced_kwargs(key)
                         cur_input = cur_data[b, c][None, None, ...]
                         if self._tensor_dim_check:
                             assert check_tensor_dim(cur_input)
